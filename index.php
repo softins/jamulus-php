@@ -1,7 +1,7 @@
 <?php
 
 define('DEFAULT_SERVER', 'jamulus.fischvolk.de');
-define('DEFAULT_PORT' 22124);
+define('DEFAULT_PORT', 22124);
 define('DEFAULT_PORT_NA', 22224);
 
 define('ILLEGAL', 0);				// illegal ID
@@ -346,10 +346,51 @@ $skills = array(
 	3 => 'Expert'
 );
 
+class CRC {
+	var $sr;
+	var $bmask = 0x10000;	// 1 << 16
+	var $poly = 0x1020;	// (1 << 5) | (1 << 12)
+
+	function CRC() {
+		$this->ResetCRC();
+	}
+
+	function ResetCRC() {
+		$this->sr = ~0;
+	}
+
+	function AddByte($b) {
+		for ($i = 0; $i < 8; $i++) {
+			$this->sr <<= 1;
+			if ($this->sr & $this->bmask) $this->sr |= 1;
+
+			if ($b & (1 << (7-$i))) $this->sr ^= 1;
+
+			if ($this->sr & 1) $this->sr ^= $this->poly;
+		}
+	}
+
+	function AddString($s) {
+		for ($i=0, $j=strlen($s); $i < $j; $i++) {
+			$this->AddByte(ord($s[$i]));
+		}
+	}
+
+	function Get() {
+		return (~$this->sr & ($this->bmask - 1));
+	}
+}
+
 $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
 
 $data = pack('vvCv', 0, CLM_REQ_SERVER_LIST, 0, 0);
 
 // need to calculate CRC
+$crc = new CRC();
+$crc->AddString($data);
+$data .= pack('v', $crc->Get());
+unset($crc);
+
+print chunk_split(bin2hex($data),2,' ')."\n";
 
 ?>
