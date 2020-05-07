@@ -449,6 +449,8 @@ function send_ping_with_num_clients($sock, $ip, $port) {
 //-----------------------------------------------------------------------------
 function process_received($sock, $data, $n, $fromip, $fromport) {
 	global $ip, $port;
+	global $servers, $serverbyip;
+	global $clientcount;
 
 	// print chunk_split(bin2hex($data),2,' ')."\n";
 
@@ -463,7 +465,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 	}
 
 	$r = unpack("vtag/vid/Ccnt/vlen", substr($data, 0, 7));
-	print_r($r);
+	// print_r($r);
 
 	if ($r['len']+9 != $n) {
 		die("Malformed packet - length mismatch");
@@ -473,6 +475,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 	case CLM_SERVER_LIST:
 		$servers = array();
 		$serverbyip = array();
+		$clientcount = 0;
 
 		for ($i = 7; $i < $n-2;) {
 			$server = unpack("Vip/vport/vcountry/Cmaxclients/Cperm/vlen", substr($data, $i, 12)); $i += 12;
@@ -498,22 +501,65 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		$index = 0;
 		foreach ($servers as $index => $server) {
 			$serverbyip[$server['ip']][$server['port']] = $index;
-			if ($index < 3) {
+			//if ($index < 3) {
 				send_ping_with_num_clients($sock, $server['ip'], $server['port']);
+			//}
+		}
+
+		// print_r($servers);
+
+		break;
+	case CLM_EMPTY_MESSAGE:
+		$index = $serverbyip[$fromip][$fromport];
+		$server =& $servers[$index];
+		$server['NAT'] = true;
+		break;
+	case CLM_PING_MS_WITHNUMCLIENTS:
+		$index = $serverbyip[$fromip][$fromport];
+		$server =& $servers[$index];
+		$resp = unpack("Vtimems/Cnclients", substr($data, 7, 5));
+		if (!array_key_exists('ping', $server)) {
+			// discard first ping and request again
+			$server['ping'] = 0;
+			$server['nclients'] = $resp['nclients'];
+			send_ping_with_num_clients($sock, $fromip, $fromport);
+		} else {
+			$timems = intval(gettimeofday(TRUE) * 1000) % 86400000;
+			$server['ping'] = $timems - $resp['timems'];
+			send_request($sock, CLM_REQ_VERSION_AND_OS, $fromip, $fromport);
+			if ($server['nclients'] = $resp['nclients']) {
+				send_request($sock, CLM_REQ_CONN_CLIENTS_LIST, $fromip, $fromport);
 			}
 		}
 
-		print_r($servers);
-
-		printf("%d servers total\n", count($servers));
-		break;
-	case CLM_EMPTY_MESSAGE:
-		break;
-	case CLM_PING_MS_WITHNUMCLIENTS:
 		break;
 	case CLM_CONN_CLIENTS_LIST:
+		$index = $serverbyip[$fromip][$fromport];
+		$server =& $servers[$index];
+		$clients = array();
+
+		for ($i = 7; $i < $n-2;) {
+			$client = unpack("Cchanid/vcountry/Vinstrument/Cskill/Vip/vlen", substr($data, $i, 14)); $i += 14;
+			$len = $client['len']; unset($client['len']);
+			$a = unpack("a${len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
+			$client['name'] = $a['name'];
+			$len = $a['len'];
+			$a = unpack("a${len}city", substr($data, $i, $len)); $i += $len;
+			$client['city'] = $a['city'];
+			$client['ip'] = inet_ntop(pack("N",$client['ip']));
+			$clients[] = $client;
+		}
+		$server['clients'] = $clients;
+		$clientcount += count($clients);
 		break;
 	case CLM_VERSION_AND_OS:
+		$index = $serverbyip[$fromip][$fromport];
+		$server =& $servers[$index];
+		$resp = unpack("Cos/vlen", substr($data, 7, 3)); $i = 10;
+		$len = $resp['len'];
+		$a = unpack("a${len}version", substr($data, $i, $len)); $i += $len;
+		$server['os'] = $resp['os'];
+		$server['version'] = $a['version'];
 		break;
 	}
 }
@@ -526,7 +572,7 @@ socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>3, 'usec'=>0));
 send_request($sock, CLM_REQ_SERVER_LIST, $ip, $port);
 
 while ($n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport)) {
-	printf("socket_recvfrom: %d bytes received from %s:%d\n", $n, $fromip, $fromport);
+	// printf("socket_recvfrom: %d bytes received from %s:%d\n", $n, $fromip, $fromport);
 
 	if ($n != strlen($data)) {
 		die("Returned data length does not match string");
@@ -534,6 +580,11 @@ while ($n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport)) {
 
 	process_received($sock, $data, $n, $fromip, $fromport);
 }
+
+print_r($servers);
+
+printf("%d servers total\n", count($servers));
+printf("%d clients total\n", $clientcount);
 
 socket_close($sock);
 ?>
