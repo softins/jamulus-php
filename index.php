@@ -4,6 +4,13 @@ define('DEFAULT_SERVER', 'jamulus.fischvolk.de');
 define('DEFAULT_PORT', 22124);
 define('DEFAULT_PORT_NA', 22224);
 
+$ip = gethostbyname(DEFAULT_SERVER);
+if ($ip == DEFAULT_SERVER) {
+	die("Can't resolve hostname ".DEFAULT_SERVER);
+}
+$port = DEFAULT_PORT;
+// $port = DEFAULT_PORT_NA;
+
 define('ILLEGAL', 0);				// illegal ID
 define('ACKN', 1);				// acknowledge
 define('JITT_BUF_SIZE', 10);			// jitter buffer size
@@ -346,16 +353,28 @@ $skills = array(
 	3 => 'Expert'
 );
 
+$opsys = array(
+	0 => 'Windows',
+	1 => 'MacOS',
+	2 => 'Linux',
+	3 => 'Android',
+	4 => 'iOS',
+	5 => 'Unix'
+);
+
 class CRC {
 	var $sr;
 	var $bmask = 0x10000;	// 1 << 16
 	var $poly = 0x1020;	// (1 << 5) | (1 << 12)
 
-	function CRC() {
-		$this->ResetCRC();
+	function CRC($s = null) {
+		$this->Reset();
+		if (isset($s)) {
+			$this->AddString($s);
+		}
 	}
 
-	function ResetCRC() {
+	function Reset() {
 		$this->sr = ~0;
 	}
 
@@ -381,16 +400,140 @@ class CRC {
 	}
 }
 
+//-----------------------------------------------------------------------------
+// send a request message
+//-----------------------------------------------------------------------------
+function send_request($sock, $id, $ip, $port) {
+	$data = pack('vvCv', 0, $id, 0, 0);
+
+	// need to calculate CRC
+	$crc = new CRC($data);
+	$data .= pack('v', $crc->Get());
+	unset($crc);
+
+	// print chunk_split(bin2hex($data),2,' ')."\n";
+
+	$n = socket_sendto($sock, $data, strlen($data), 0, $ip, $port);
+
+	if ($n === false) {
+		die("Send error: ".socket_strerror(socket_last_error()));
+	}
+}
+
+//-----------------------------------------------------------------------------
+// send a request message
+//-----------------------------------------------------------------------------
+function send_ping_with_num_clients($sock, $ip, $port) {
+	$id = CLM_PING_MS_WITHNUMCLIENTS;
+
+	$timems = intval(gettimeofday(TRUE) * 1000) % 86400000;
+
+	$data = pack('vvCvVC', 0, $id, 0, 5, $timems, 0);
+
+	// need to calculate CRC
+	$crc = new CRC($data);
+	$data .= pack('v', $crc->Get());
+	unset($crc);
+
+	// print chunk_split(bin2hex($data),2,' ')."\n";
+
+	$n = socket_sendto($sock, $data, strlen($data), 0, $ip, $port);
+
+	if ($n === false) {
+		die("Send error: ".socket_strerror(socket_last_error()));
+	}
+}
+
+//-----------------------------------------------------------------------------
+// process a received datagram
+//-----------------------------------------------------------------------------
+function process_received($sock, $data, $n, $fromip, $fromport) {
+	global $ip, $port;
+
+	// print chunk_split(bin2hex($data),2,' ')."\n";
+
+	$crc = new CRC(substr($data, 0, -2));
+	$calccrc = $crc->Get();
+	$recvcrc = unpack("vcrc", substr($data, -2, 2))['crc'];
+	//printf("CRC calc=%04X recv=%04X (%s)\n", $calccrc, $recvcrc, $calccrc==$recvcrc ? 'GOOD' : 'BAD');
+	unset($crc);
+
+	if ($recvcrc != $calccrc) {
+		die("CRC mismatch in received message");
+	}
+
+	$r = unpack("vtag/vid/Ccnt/vlen", substr($data, 0, 7));
+	print_r($r);
+
+	if ($r['len']+9 != $n) {
+		die("Malformed packet - length mismatch");
+	}
+
+	switch($r['id']) {
+	case CLM_SERVER_LIST:
+		$servers = array();
+		$serverbyip = array();
+
+		for ($i = 7; $i < $n-2;) {
+			$server = unpack("Vip/vport/vcountry/Cmaxclients/Cperm/vlen", substr($data, $i, 12)); $i += 12;
+			$len = $server['len']; unset($server['len']);
+			$a = unpack("a${len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
+			$server['name'] = $a['name'];
+			$len = $a['len'];
+			$a = unpack("a${len}ipaddrs/vlen", substr($data, $i, $len+2)); $i += $len+2;
+			$server['ipaddrs'] = $a['ipaddrs'];
+			$len = $a['len'];
+			$a = unpack("a${len}city", substr($data, $i, $len+2)); $i += $len;
+			$server['city'] = $a['city'];
+
+			if ($server['ip'] == 0 && $server['port'] == 0) {
+				$server['ip'] = $ip;
+				$server['port'] = $port;
+			} else {
+				$server['ip'] = inet_ntop(pack("N",$server['ip']));
+			}
+			$servers[] = $server;
+		}
+
+		$index = 0;
+		foreach ($servers as $index => $server) {
+			$serverbyip[$server['ip']][$server['port']] = $index;
+			if ($index < 3) {
+				send_ping_with_num_clients($sock, $server['ip'], $server['port']);
+			}
+		}
+
+		print_r($servers);
+
+		printf("%d servers total\n", count($servers));
+		break;
+	case CLM_EMPTY_MESSAGE:
+		break;
+	case CLM_PING_MS_WITHNUMCLIENTS:
+		break;
+	case CLM_CONN_CLIENTS_LIST:
+		break;
+	case CLM_VERSION_AND_OS:
+		break;
+	}
+}
+//-----------------------------------------------------------------------------
+
 $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
 
-$data = pack('vvCv', 0, CLM_REQ_SERVER_LIST, 0, 0);
+socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>3, 'usec'=>0));
 
-// need to calculate CRC
-$crc = new CRC();
-$crc->AddString($data);
-$data .= pack('v', $crc->Get());
-unset($crc);
+send_request($sock, CLM_REQ_SERVER_LIST, $ip, $port);
 
-print chunk_split(bin2hex($data),2,' ')."\n";
+while ($n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport)) {
+	printf("socket_recvfrom: %d bytes received from %s:%d\n", $n, $fromip, $fromport);
 
+	if ($n != strlen($data)) {
+		die("Returned data length does not match string");
+	}
+
+	process_received($sock, $data, $n, $fromip, $fromport);
+}
+
+socket_close($sock);
 ?>
