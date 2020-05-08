@@ -1,6 +1,7 @@
 <?php
 
 define('DEFAULT_SERVER', 'jamulus.fischvolk.de');
+// define('DEFAULT_SERVER', 'worldjam.vip');
 define('DEFAULT_PORT', 22124);
 define('DEFAULT_PORT_NA', 22224);
 
@@ -10,6 +11,10 @@ if ($ip == DEFAULT_SERVER) {
 }
 $port = DEFAULT_PORT;
 // $port = DEFAULT_PORT_NA;
+
+$servers = array();
+$serverbyip = array();
+$clientcount = 0;
 
 define('ILLEGAL', 0);				// illegal ID
 define('ACKN', 1);				// acknowledge
@@ -50,16 +55,16 @@ define('CLM_CHANNEL_LEVEL_LIST', 1015);		// channel level list
 define('CLM_REGISTER_SERVER_RESP', 1016);	// status of server registration request
 
 $countries = array(
-	0 => 'AnyCountry',
+	0 => 'Any Country',
 	1 => 'Afghanistan',
 	2 => 'Albania',
 	3 => 'Algeria',
-	4 => 'AmericanSamoa',
+	4 => 'American Samoa',
 	5 => 'Andorra',
 	6 => 'Angola',
 	7 => 'Anguilla',
 	8 => 'Antarctica',
-	9 => 'AntiguaAndBarbuda',
+	9 => 'Antigua And Barbuda',
 	10 => 'Argentina',
 	11 => 'Armenia',
 	12 => 'Aruba',
@@ -77,58 +82,58 @@ $countries = array(
 	24 => 'Bermuda',
 	25 => 'Bhutan',
 	26 => 'Bolivia',
-	27 => 'BosniaAndHerzegowina',
+	27 => 'Bosnia And Herzegowina',
 	28 => 'Botswana',
-	29 => 'BouvetIsland',
+	29 => 'Bouvet Island',
 	30 => 'Brazil',
-	31 => 'BritishIndianOceanTerritory',
+	31 => 'British Indian Ocean Territory',
 	32 => 'Brunei',
 	33 => 'Bulgaria',
-	34 => 'BurkinaFaso',
+	34 => 'Burkina Faso',
 	35 => 'Burundi',
 	36 => 'Cambodia',
 	37 => 'Cameroon',
 	38 => 'Canada',
-	39 => 'CapeVerde',
-	40 => 'CaymanIslands',
-	41 => 'CentralAfricanRepublic',
+	39 => 'Cape Verde',
+	40 => 'Cayman Islands',
+	41 => 'Central African Republic',
 	42 => 'Chad',
 	43 => 'Chile',
 	44 => 'China',
-	45 => 'ChristmasIsland',
-	46 => 'CocosIslands',
+	45 => 'Christmas Island',
+	46 => 'Cocos Islands',
 	47 => 'Colombia',
 	48 => 'Comoros',
-	49 => 'CongoKinshasa',
-	50 => 'CongoBrazzaville',
-	51 => 'CookIslands',
-	52 => 'CostaRica',
-	53 => 'IvoryCoast',
+	49 => 'Congo Kinshasa',
+	50 => 'Congo Brazzaville',
+	51 => 'Cook Islands',
+	52 => 'Costa Rica',
+	53 => 'Ivory Coast',
 	54 => 'Croatia',
 	55 => 'Cuba',
 	56 => 'Cyprus',
-	57 => 'CzechRepublic',
+	57 => 'Czech Republic',
 	58 => 'Denmark',
 	59 => 'Djibouti',
 	60 => 'Dominica',
-	61 => 'DominicanRepublic',
-	62 => 'EastTimor',
+	61 => 'Dominican Republic',
+	62 => 'East Timor',
 	63 => 'Ecuador',
 	64 => 'Egypt',
-	65 => 'ElSalvador',
-	66 => 'EquatorialGuinea',
+	65 => 'El Salvador',
+	66 => 'Equatorial Guinea',
 	67 => 'Eritrea',
 	68 => 'Estonia',
 	69 => 'Ethiopia',
-	70 => 'FalklandIslands',
-	71 => 'FaroeIslands',
+	70 => 'Falkland Islands',
+	71 => 'Faroe Islands',
 	72 => 'Fiji',
 	73 => 'Finland',
 	74 => 'France',
 	75 => 'Guernsey',
-	76 => 'FrenchGuiana',
-	77 => 'FrenchPolynesia',
-	78 => 'FrenchSouthernTerritories',
+	76 => 'French Guiana',
+	77 => 'French Polynesia',
+	78 => 'French Southern Territories',
 	79 => 'Gabon',
 	80 => 'Gambia',
 	81 => 'Georgia',
@@ -142,12 +147,12 @@ $countries = array(
 	89 => 'Guam',
 	90 => 'Guatemala',
 	91 => 'Guinea',
-	92 => 'GuineaBissau',
+	92 => 'Guinea Bissau',
 	93 => 'Guyana',
 	94 => 'Haiti',
-	95 => 'HeardAndMcDonaldIslands',
+	95 => 'Heard And McDonald Islands',
 	96 => 'Honduras',
-	97 => 'HongKong',
+	97 => 'Hong Kong',
 	98 => 'Hungary',
 	99 => 'Iceland',
 	100 => 'India',
@@ -163,8 +168,8 @@ $countries = array(
 	110 => 'Kazakhstan',
 	111 => 'Kenya',
 	112 => 'Kiribati',
-	113 => 'NorthKorea',
-	114 => 'SouthKorea',
+	113 => 'North Korea',
+	114 => 'South Korea',
 	115 => 'Kuwait',
 	116 => 'Kyrgyzstan',
 	117 => 'Laos',
@@ -184,7 +189,7 @@ $countries = array(
 	131 => 'Maldives',
 	132 => 'Mali',
 	133 => 'Malta',
-	134 => 'MarshallIslands',
+	134 => 'Marshall Islands',
 	135 => 'Martinique',
 	136 => 'Mauritania',
 	137 => 'Mauritius',
@@ -199,61 +204,61 @@ $countries = array(
 	146 => 'Mozambique',
 	147 => 'Myanmar',
 	148 => 'Namibia',
-	149 => 'NauruCountry',
+	149 => 'Nauru Country',
 	150 => 'Nepal',
 	151 => 'Netherlands',
-	152 => 'CuraSao',
-	153 => 'NewCaledonia',
-	154 => 'NewZealand',
+	152 => 'Cura Sao',
+	153 => 'New Caledonia',
+	154 => 'New Zealand',
 	155 => 'Nicaragua',
 	156 => 'Niger',
 	157 => 'Nigeria',
 	158 => 'Niue',
-	159 => 'NorfolkIsland',
-	160 => 'NorthernMarianaIslands',
+	159 => 'Norfolk Island',
+	160 => 'Northern Mariana Islands',
 	161 => 'Norway',
 	162 => 'Oman',
 	163 => 'Pakistan',
 	164 => 'Palau',
-	165 => 'PalestinianTerritories',
+	165 => 'Palestinian Territories',
 	166 => 'Panama',
-	167 => 'PapuaNewGuinea',
+	167 => 'Papua New Guinea',
 	168 => 'Paraguay',
 	169 => 'Peru',
 	170 => 'Philippines',
 	171 => 'Pitcairn',
 	172 => 'Poland',
 	173 => 'Portugal',
-	174 => 'PuertoRico',
+	174 => 'Puerto Rico',
 	175 => 'Qatar',
 	176 => 'Reunion',
 	177 => 'Romania',
 	178 => 'Russia',
 	179 => 'Rwanda',
-	180 => 'SaintKittsAndNevis',
-	181 => 'SaintLucia',
-	182 => 'SaintVincentAndTheGrenadines',
+	180 => 'Saint Kitts And Nevis',
+	181 => 'Saint Lucia',
+	182 => 'Saint Vincent And The Grenadines',
 	183 => 'Samoa',
-	184 => 'SanMarino',
-	185 => 'SaoTomeAndPrincipe',
-	186 => 'SaudiArabia',
+	184 => 'San Marino',
+	185 => 'Sao Tome And Principe',
+	186 => 'Saudi Arabia',
 	187 => 'Senegal',
 	188 => 'Seychelles',
-	189 => 'SierraLeone',
+	189 => 'Sierra Leone',
 	190 => 'Singapore',
 	191 => 'Slovakia',
 	192 => 'Slovenia',
-	193 => 'SolomonIslands',
+	193 => 'Solomon Islands',
 	194 => 'Somalia',
-	195 => 'SouthAfrica',
-	196 => 'SouthGeorgiaAndTheSouthSandwichIslands',
+	195 => 'South Africa',
+	196 => 'South Georgia And The South Sandwich Islands',
 	197 => 'Spain',
-	198 => 'SriLanka',
-	199 => 'SaintHelena',
-	200 => 'SaintPierreAndMiquelon',
+	198 => 'Sri Lanka',
+	199 => 'Saint Helena',
+	200 => 'Saint Pierre And Miquelon',
 	201 => 'Sudan',
 	202 => 'Suriname',
-	203 => 'SvalbardAndJanMayenIslands',
+	203 => 'Svalbard And Jan Mayen Islands',
 	204 => 'Swaziland',
 	205 => 'Sweden',
 	206 => 'Switzerland',
@@ -263,91 +268,91 @@ $countries = array(
 	210 => 'Tanzania',
 	211 => 'Thailand',
 	212 => 'Togo',
-	213 => 'TokelauCountry',
+	213 => 'Tokelau Country',
 	214 => 'Tonga',
-	215 => 'TrinidadAndTobago',
+	215 => 'Trinidad And Tobago',
 	216 => 'Tunisia',
 	217 => 'Turkey',
 	218 => 'Turkmenistan',
-	219 => 'TurksAndCaicosIslands',
-	220 => 'TuvaluCountry',
+	219 => 'Turks And Caicos Islands',
+	220 => 'Tuvalu Country',
 	221 => 'Uganda',
 	222 => 'Ukraine',
-	223 => 'UnitedArabEmirates',
-	224 => 'UnitedKingdom',
-	225 => 'UnitedStates',
-	226 => 'UnitedStatesMinorOutlyingIslands',
+	223 => 'United Arab Emirates',
+	224 => 'United Kingdom',
+	225 => 'United States',
+	226 => 'United States Minor Outlying Islands',
 	227 => 'Uruguay',
 	228 => 'Uzbekistan',
 	229 => 'Vanuatu',
-	230 => 'VaticanCityState',
+	230 => 'Vatican City State',
 	231 => 'Venezuela',
 	232 => 'Vietnam',
-	233 => 'BritishVirginIslands',
-	234 => 'UnitedStatesVirginIslands',
-	235 => 'WallisAndFutunaIslands',
-	236 => 'WesternSahara',
+	233 => 'British Virgin Islands',
+	234 => 'United States Virgin Islands',
+	235 => 'Wallis And Futuna Islands',
+	236 => 'Western Sahara',
 	237 => 'Yemen',
-	238 => 'CanaryIslands',
+	238 => 'Canary Islands',
 	239 => 'Zambia',
 	240 => 'Zimbabwe',
-	241 => 'ClippertonIsland',
+	241 => 'Clipperton Island',
 	242 => 'Montenegro',
 	243 => 'Serbia',
-	244 => 'SaintBarthelemy',
-	245 => 'SaintMartin',
-	246 => 'LatinAmerica',
-	247 => 'AscensionIsland',
-	248 => 'AlandIslands',
-	249 => 'DiegoGarcia',
-	250 => 'CeutaAndMelilla',
-	251 => 'IsleOfMan',
+	244 => 'Saint Barthelemy',
+	245 => 'Saint Martin',
+	246 => 'Latin America',
+	247 => 'Ascension Island',
+	248 => 'Aland Islands',
+	249 => 'Diego Garcia',
+	250 => 'Ceuta And Melilla',
+	251 => 'Isle Of Man',
 	252 => 'Jersey',
-	253 => 'TristanDaCunha',
-	254 => 'SouthSudan',
+	253 => 'Tristan Da Cunha',
+	254 => 'South Sudan',
 	255 => 'Bonaire',
-	256 => 'SintMaarten',
+	256 => 'Sint Maarten',
 	257 => 'Kosovo',
-	258 => 'EuropeanUnion',
-	259 => 'OutlyingOceania',
+	258 => 'European Union',
+	259 => 'Outlying Oceania',
 	260 => 'World',
 	261 => 'Europe'
 );
 
 $instruments = array(
 	0 => 'None',
-	1 => 'Drum_Set',
+	1 => 'Drum Set',
 	2 => 'Djembe',
-	3 => 'Electric_Guitar',
-	4 => 'Acoustic_Guitar',
-	5 => 'Bass_Guitar',
+	3 => 'Electric Guitar',
+	4 => 'Acoustic Guitar',
+	5 => 'Bass Guitar',
 	6 => 'Keyboard',
 	7 => 'Synthesizer',
-	8 => 'Grand_Piano',
+	8 => 'Grand Piano',
 	9 => 'Accordion',
 	10 => 'Vocal',
 	11 => 'Microphone',
 	12 => 'Harmonica',
 	13 => 'Trumpet',
 	14 => 'Trombone',
-	15 => 'French_Horn',
+	15 => 'French Horn',
 	16 => 'Tuba',
 	17 => 'Saxophone',
 	18 => 'Clarinet',
 	19 => 'Flute',
 	20 => 'Violin',
 	21 => 'Cello',
-	22 => 'Double_Bass',
+	22 => 'Double Bass',
 	23 => 'Recorder',
 	24 => 'Streamer',
 	25 => 'Listener',
-	26 => 'Guitar_Vocal',
-	27 => 'Keyboard_Vocal',
+	26 => 'Guitar Vocal',
+	27 => 'Keyboard Vocal',
 	28 => 'Bodhran'
 );
 
 $skills = array(
-	0 => 'Not_Set',
+	0 => 'Not Set',
 	1 => 'Beginner',
 	2 => 'Intermediate',
 	3 => 'Expert'
@@ -451,6 +456,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 	global $ip, $port;
 	global $servers, $serverbyip;
 	global $clientcount;
+	global $countries, $instruments, $skills, $opsys;
 
 	// print chunk_split(bin2hex($data),2,' ')."\n";
 
@@ -473,12 +479,10 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 
 	switch($r['id']) {
 	case CLM_SERVER_LIST:
-		$servers = array();
-		$serverbyip = array();
-		$clientcount = 0;
 
 		for ($i = 7; $i < $n-2;) {
 			$server = unpack("Vip/vport/vcountry/Cmaxclients/Cperm/vlen", substr($data, $i, 12)); $i += 12;
+			$server['country'] = $countries[$server['country']];
 			$len = $server['len']; unset($server['len']);
 			$a = unpack("a${len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
 			$server['name'] = $a['name'];
@@ -540,6 +544,9 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 
 		for ($i = 7; $i < $n-2;) {
 			$client = unpack("Cchanid/vcountry/Vinstrument/Cskill/Vip/vlen", substr($data, $i, 14)); $i += 14;
+			$client['country'] = $countries[$client['country']];
+			$client['instrument'] = $instruments[$client['instrument']];
+			$client['skill'] = $skills[$client['skill']];
 			$len = $client['len']; unset($client['len']);
 			$a = unpack("a${len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
 			$client['name'] = $a['name'];
@@ -558,7 +565,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		$resp = unpack("Cos/vlen", substr($data, 7, 3)); $i = 10;
 		$len = $resp['len'];
 		$a = unpack("a${len}version", substr($data, $i, $len)); $i += $len;
-		$server['os'] = $resp['os'];
+		$server['os'] = $opsys[$resp['os']];
 		$server['version'] = $a['version'];
 		break;
 	}
@@ -581,10 +588,12 @@ while ($n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport)) {
 	process_received($sock, $data, $n, $fromip, $fromport);
 }
 
-print_r($servers);
+// print_r($servers);
 
-printf("%d servers total\n", count($servers));
-printf("%d clients total\n", $clientcount);
+// printf("%d servers total\n", count($servers));
+// printf("%d clients total\n", $clientcount);
 
 socket_close($sock);
+
+print json_encode($servers, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK);
 ?>
