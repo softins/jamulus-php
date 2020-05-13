@@ -1,16 +1,29 @@
 <?php
 
-define('DEFAULT_SERVER', 'jamulus.fischvolk.de');
-// define('DEFAULT_SERVER', 'worldjam.vip');
-define('DEFAULT_PORT', 22124);
-define('DEFAULT_PORT_NA', 22224);
+$http_origin = $_SERVER['HTTP_ORIGIN'];
 
-$ip = gethostbyname(DEFAULT_SERVER);
-if ($ip == DEFAULT_SERVER) {
-	die("Can't resolve hostname ".DEFAULT_SERVER);
+if ($http_origin == "http://jamulus.softins.co.uk" || $http_origin == "http://jamulus.softins.co.uk:8080")
+{
+    header("Access-Control-Allow-Origin: $http_origin");
+    header("Vary: Origin");
 }
-$port = DEFAULT_PORT;
-// $port = DEFAULT_PORT_NA;
+
+if (!isset($_GET['central'])) {
+	define('DEFAULT_SERVER', 'jamulus.fischvolk.de');
+	// define('DEFAULT_SERVER', 'worldjam.vip');
+	define('DEFAULT_PORT', 22124);
+	define('DEFAULT_PORT_NA', 22224);
+
+	$ip = gethostbyname(DEFAULT_SERVER);
+	if ($ip == DEFAULT_SERVER) {
+		die("Can't resolve hostname ".DEFAULT_SERVER);
+	}
+	$port = DEFAULT_PORT;
+	// $port = DEFAULT_PORT_NA;
+} else {
+	list($host, $port) = explode(':', $_GET['central']);
+	$ip = gethostbyname($host);
+}
 
 $servers = array();
 $serverbyip = array();
