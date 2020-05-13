@@ -9,21 +9,22 @@ if ($http_origin == "http://jamulus.softins.co.uk" || $http_origin == "http://ja
 }
 
 if (!isset($_GET['central'])) {
-	define('DEFAULT_SERVER', 'jamulus.fischvolk.de');
-	// define('DEFAULT_SERVER', 'worldjam.vip');
-	define('DEFAULT_PORT', 22124);
-	define('DEFAULT_PORT_NA', 22224);
-
-	$ip = gethostbyname(DEFAULT_SERVER);
-	if ($ip == DEFAULT_SERVER) {
-		die("Can't resolve hostname ".DEFAULT_SERVER);
-	}
-	$port = DEFAULT_PORT;
-	// $port = DEFAULT_PORT_NA;
-} else {
-	list($host, $port) = explode(':', $_GET['central']);
-	$ip = gethostbyname($host);
+	echo '[]';	// send empty body
+	exit;	// send empty body
 }
+
+list($host, $port) = explode(':', $_GET['central']);
+$ip = gethostbyname($host);
+
+$cachefile = '/tmp/cached-'.$host.'.'.$port.'.html';
+$cachetime = 10;	// 10 seconds - to keep up-to-date, but avoid multiple clients hammering servers
+
+// Server from the cache if it is younger than $cachetime
+if (file_exists($cachefile) && time() < filemtime($cachefile) + $cachetime) {
+	readfile($cachefile);
+	exit;
+}
+ob_start();	// start the output buffer
 
 $servers = array();
 $serverbyip = array();
@@ -608,5 +609,13 @@ while ($n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport)) {
 
 socket_close($sock);
 
-print json_encode($servers, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK);
+print json_encode($servers, /* JSON_PRETTY_PRINT |*/ JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK);
+
+// cache the contents
+$cached = fopen($cachefile, 'w');
+if ($cached) {
+	fwrite($cached, ob_get_contents());
+	fclose($cached);
+}
+ob_end_flush();
 ?>
