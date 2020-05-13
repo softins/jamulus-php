@@ -8,6 +8,8 @@ if ($http_origin == "http://jamulus.softins.co.uk" || $http_origin == "http://ja
     header("Vary: Origin");
 }
 
+header('Content-Type: application/json');
+
 if (!isset($_GET['central'])) {
 	echo '[]';	// send empty body
 	exit;	// send empty body
@@ -16,7 +18,7 @@ if (!isset($_GET['central'])) {
 list($host, $port) = explode(':', $_GET['central']);
 $ip = gethostbyname($host);
 
-$cachefile = '/tmp/cached-'.$host.'.'.$port.'.html';
+$cachefile = '/tmp/cached-'.$host.'-'.$port.'.json';
 $cachetime = 10;	// 10 seconds - to keep up-to-date, but avoid multiple clients hammering servers
 
 // Server from the cache if it is younger than $cachetime
@@ -612,10 +614,12 @@ socket_close($sock);
 print json_encode($servers, /* JSON_PRETTY_PRINT |*/ JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK);
 
 // cache the contents
-$cached = fopen($cachefile, 'w');
+$tmpfile = $cachefile.'.tmp';
+$cached = fopen($tmpfile, 'w');
 if ($cached) {
 	fwrite($cached, ob_get_contents());
 	fclose($cached);
+	rename($tmpfile, $cachefile);
 }
 ob_end_flush();
 ?>
