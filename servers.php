@@ -611,8 +611,8 @@ while ($n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport)) {
 
 socket_close($sock);
 
-foreach ($servers as $index => $server) {
-	$server['index'] = $index;
+for ($i = 0, $size = count($servers); $i < $size; $i++) {
+	$servers[$i]['index'] = $i;
 }
 
 print json_encode($servers, /* JSON_PRETTY_PRINT |*/ JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK);
