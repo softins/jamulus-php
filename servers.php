@@ -611,6 +611,10 @@ while ($n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport)) {
 
 socket_close($sock);
 
+foreach ($servers as $index => $server) {
+	$server['index'] = $index;
+}
+
 print json_encode($servers, /* JSON_PRETTY_PRINT |*/ JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK);
 
 // cache the contents
