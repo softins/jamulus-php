@@ -71,7 +71,7 @@ define('CLM_CHANNEL_LEVEL_LIST', 1015);		// channel level list
 define('CLM_REGISTER_SERVER_RESP', 1016);	// status of server registration request
 
 $countries = array(
-	0 => '- - -',
+	0 => '',
 	1 => 'Afghanistan',
 	2 => 'Albania',
 	3 => 'Algeria',
@@ -336,7 +336,7 @@ $countries = array(
 );
 
 $instruments = array(
-	0 => '- - -',
+	0 => '',
 	1 => 'Drum Set',
 	2 => 'Djembe',
 	3 => 'Electric Guitar',
@@ -368,7 +368,7 @@ $instruments = array(
 );
 
 $skills = array(
-	0 => '- - -',
+	0 => '',
 	1 => 'Beginner',
 	2 => 'Intermediate',
 	3 => 'Expert'
