@@ -17,6 +17,7 @@ if (!isset($_GET['central'])) {
 
 list($host, $port) = explode(':', $_GET['central']);
 $ip = gethostbyname($host);
+$numip = ip2long($ip);
 
 $cachefile = '/tmp/cached-'.$host.'-'.$port.'.json';
 $cachetime = 10;	// 10 seconds - to keep up-to-date, but avoid multiple clients hammering servers
@@ -469,7 +470,7 @@ function send_ping_with_num_clients($sock, $ip, $port) {
 // process a received datagram
 //-----------------------------------------------------------------------------
 function process_received($sock, $data, $n, $fromip, $fromport) {
-	global $ip, $port;
+	global $numip, $ip, $port;
 	global $servers, $serverbyip;
 	global $clientcount;
 	global $countries, $instruments, $skills, $opsys;
@@ -497,7 +498,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 	case CLM_SERVER_LIST:
 
 		for ($i = 7; $i < $n-2;) {
-			$server = unpack("Vip/vport/vcountry/Cmaxclients/Cperm/vlen", substr($data, $i, 12)); $i += 12;
+			$server = unpack("Vnumip/vport/vcountry/Cmaxclients/Cperm/vlen", substr($data, $i, 12)); $i += 12;
 			$server['country'] = $countries[$server['country']];
 			$len = $server['len']; unset($server['len']);
 			$a = unpack("a${len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
@@ -509,12 +510,14 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$a = unpack("a${len}city", substr($data, $i, $len+2)); $i += $len;
 			$server['city'] = $a['city'];
 
-			if ($server['ip'] == 0 && $server['port'] == 0) {
+			if ($server['numip'] == 0 && $server['port'] == 0) {
 				$server['ip'] = $ip;
+				$server['numip'] = $numip;
 				$server['port'] = $port;
 			} else {
-				$server['ip'] = inet_ntop(pack("N",$server['ip']));
+				$server['ip'] = long2ip($server['numip']);
 			}
+			$server['ping'] = -1;
 			$server['NAT'] = false;
 			$server['os'] = '';
 			$server['version'] = '';
@@ -524,9 +527,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		$index = 0;
 		foreach ($servers as $index => $server) {
 			$serverbyip[$server['ip']][$server['port']] = $index;
-			//if ($index < 3) {
-				send_ping_with_num_clients($sock, $server['ip'], $server['port']);
-			//}
+			send_ping_with_num_clients($sock, $server['ip'], $server['port']);
 		}
 
 		// print_r($servers);
@@ -541,7 +542,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		$index = $serverbyip[$fromip][$fromport];
 		$server =& $servers[$index];
 		$resp = unpack("Vtimems/Cnclients", substr($data, 7, 5));
-		if (!array_key_exists('ping', $server)) {
+		if ($server['ping'] < 0) {
 			// discard first ping and request again
 			$server['ping'] = 0;
 			$server['nclients'] = $resp['nclients'];
@@ -562,7 +563,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		$clients = array();
 
 		for ($i = 7; $i < $n-2;) {
-			$client = unpack("Cchanid/vcountry/Vinstrument/Cskill/Vip/vlen", substr($data, $i, 14)); $i += 14;
+			$client = unpack("Cchanid/vcountry/Vinstrument/Cskill/Vnumip/vlen", substr($data, $i, 14)); $i += 14;
 			$client['country'] = $countries[$client['country']];
 			$client['instrument'] = $instruments[$client['instrument']];
 			$client['skill'] = $skills[$client['skill']];
@@ -572,7 +573,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$len = $a['len'];
 			$a = unpack("a${len}city", substr($data, $i, $len)); $i += $len;
 			$client['city'] = $a['city'];
-			$client['ip'] = inet_ntop(pack("N",$client['ip']));
+			$client['ip'] = long2ip($client['numip']);
 			$clients[] = $client;
 		}
 		$server['clients'] = $clients;
