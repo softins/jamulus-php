@@ -1,2 +1,2 @@
 # jamulus-php
-PHP pages to display info from Jamulus servers
+PHP script to fetch info from Jamulus servers and return as JSON
