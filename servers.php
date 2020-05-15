@@ -515,6 +515,9 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			} else {
 				$server['ip'] = inet_ntop(pack("N",$server['ip']));
 			}
+			$server['NAT'] = false;
+			$server['os'] = '';
+			$server['version'] = '';
 			$servers[] = $server;
 		}
 
