@@ -19,14 +19,28 @@ list($host, $port) = explode(':', $_GET['central']);
 $ip = gethostbyname($host);
 $numip = ip2long($ip);
 
+// define the cache file
 $cachefile = '/tmp/cached-'.$host.'-'.$port.'.json';
 $cachetime = 10;	// 10 seconds - to keep up-to-date, but avoid multiple clients hammering servers
 
-// Server from the cache if it is younger than $cachetime
-if (file_exists($cachefile) && time() < filemtime($cachefile) + $cachetime) {
-	readfile($cachefile);
-	exit;
+// and a temporary file for refreshing it - this will be created with exclusive lock to avoid multiple writers
+$tmpfile = $cachefile.'.tmp';
+
+for(;;) {
+	// Serve from the cache if it is younger than $cachetime
+	if (file_exists($cachefile) && time() < filemtime($cachefile) + $cachetime) {
+		readfile($cachefile);
+		exit;
+	}
+
+	// otherwise, try to create temp file for new data
+	if ($tmp = fopen($tmpfile, 'x'))
+		break;  // we have the temp file, so fetch new data
+
+	// wait 200ms and check cache file again (another request was building it)
+	usleep(200000);
 }
+
 ob_start();	// start the output buffer
 
 $servers = array();
@@ -622,11 +636,10 @@ for ($i = 0, $size = count($servers); $i < $size; $i++) {
 print json_encode($servers, /* JSON_PRETTY_PRINT |*/ JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK);
 
 // cache the contents
-$tmpfile = $cachefile.'.tmp';
-$cached = fopen($tmpfile, 'w');
-if ($cached) {
-	fwrite($cached, ob_get_contents());
-	fclose($cached);
+if ($tmp) {
+	fwrite($tmp, ob_get_contents());
+	fclose($tmp);
+	// now move the new data into place atomically
 	rename($tmpfile, $cachefile);
 }
 ob_end_flush();
