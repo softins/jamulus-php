@@ -16,6 +16,7 @@ if (!isset($_GET['central'])) {
 }
 
 list($host, $port) = explode(':', $_GET['central']);
+$port = (int)$port;
 $ip = gethostbyname($host);
 $numip = ip2long($ip);
 
@@ -633,7 +634,7 @@ for ($i = 0, $size = count($servers); $i < $size; $i++) {
 	$servers[$i]['index'] = $i;
 }
 
-print json_encode($servers, /* JSON_PRETTY_PRINT |*/ JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK);
+print json_encode($servers, /* JSON_PRETTY_PRINT |*/ JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 // cache the contents
 if ($tmp) {
