@@ -1,11 +1,13 @@
 <?php
 
-$http_origin = $_SERVER['HTTP_ORIGIN'];
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+	$http_origin = $_SERVER['HTTP_ORIGIN'];
 
-if ($http_origin == "http://jamulus.softins.co.uk" || $http_origin == "http://jamulus.softins.co.uk:8080")
-{
-    header("Access-Control-Allow-Origin: $http_origin");
-    header("Vary: Origin");
+	if ($http_origin == "http://jamulus.softins.co.uk" || $http_origin == "http://jamulus.softins.co.uk:8080")
+	{
+		header("Access-Control-Allow-Origin: $http_origin");
+		header("Vary: Origin");
+	}
 }
 
 header('Content-Type: application/json');
@@ -13,12 +15,16 @@ header('Content-Type: application/json');
 if (!isset($_GET['central'])) {
 	echo '[]';	// send empty body
 	exit;	// send empty body
+	//$_GET['central'] = 'jamulus.fischvolk.de:22124';
 }
 
 list($host, $port) = explode(':', $_GET['central']);
 $port = (int)$port;
 $ip = gethostbyname($host);
 $numip = ip2long($ip);
+
+$listcomplete = false; // need to get the whole list before any other messages
+$msgqueue = array();
 
 // define the cache file
 $cachefile = '/tmp/cached-'.$host.'-'.$port.'.json';
@@ -27,6 +33,14 @@ $cachetime = 10;	// 10 seconds - to keep up-to-date, but avoid multiple clients 
 // and a temporary file for refreshing it - this will be created with exclusive lock to avoid multiple writers
 $tmpfile = $cachefile.'.tmp';
 
+function cleanup() {
+	global $tmpfile;
+	if (isset($tmpfile)) {
+		unlink($tmpfile);	// cleanup temp file if we abort with an error
+	}
+}
+
+$start = time();
 for(;;) {
 	// Serve from the cache if it is younger than $cachetime
 	if (file_exists($cachefile) && time() < filemtime($cachefile) + $cachetime) {
@@ -38,9 +52,15 @@ for(;;) {
 	if ($tmp = @fopen($tmpfile, 'x'))
 		break;  // we have the temp file, so fetch new data
 
+	if (time() > $start + 20) {	// don't wait forever
+		die("Can't obtain temporary file\n");
+	}
+
 	// wait 200ms and check cache file again (another request was building it)
 	usleep(200000);
 }
+
+register_shutdown_function('cleanup');	// ensure temp file gets deleted if we abort
 
 ob_start();	// start the output buffer
 
@@ -489,6 +509,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 	global $servers, $serverbyip;
 	global $clientcount;
 	global $countries, $instruments, $skills, $opsys;
+	global $listcomplete, $msgqueue;
 
 	// print chunk_split(bin2hex($data),2,' ')."\n";
 
@@ -507,6 +528,14 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 
 	if ($r['len']+9 != $n) {
 		die("Malformed packet - length mismatch");
+	}
+
+	// print("ID=".$r['id']."\n");
+
+	if (!$listcomplete && $r['id'] != CLM_SERVER_LIST) {
+		$msgqueue[] = array($data, $n, $fromip, $fromport);
+		// print("Packet queued n=$n, fromip=$fromip, $fromport=$fromport\n");
+		return;
 	}
 
 	switch($r['id']) {
@@ -547,61 +576,83 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 
 		// print_r($servers);
 
+		$listcomplete = true;
+		foreach ($msgqueue as $msg) {
+			process_received($sock, $msg[0], $msg[1], $msg[2], $msg[3]);
+		}
+		$msgqueue = array();
+
 		break;
 	case CLM_EMPTY_MESSAGE:
-		$index = $serverbyip[$fromip][$fromport];
-		$server =& $servers[$index];
-		$server['NAT'] = true;
+		if (isset($serverbyip[$fromip][$fromport])) {
+			$index = $serverbyip[$fromip][$fromport];
+			$server =& $servers[$index];
+			$server['NAT'] = true;
+		} else {
+			error_log("Unexpected message from $fromip:$fromport\n");
+		}
 		break;
 	case CLM_PING_MS_WITHNUMCLIENTS:
-		$index = $serverbyip[$fromip][$fromport];
-		$server =& $servers[$index];
-		$resp = unpack("Vtimems/Cnclients", substr($data, 7, 5));
-		if ($server['ping'] < 0) {
-			// discard first ping and request again
-			$server['ping'] = 0;
-			$server['nclients'] = $resp['nclients'];
-			send_ping_with_num_clients($sock, $fromip, $fromport);
-		} else {
-			$timems = intval(gettimeofday(TRUE) * 1000) % 86400000;
-			$server['ping'] = $timems - $resp['timems'];
-			send_request($sock, CLM_REQ_VERSION_AND_OS, $fromip, $fromport);
-			if ($server['nclients'] = $resp['nclients']) {
-				send_request($sock, CLM_REQ_CONN_CLIENTS_LIST, $fromip, $fromport);
+		if (isset($serverbyip[$fromip][$fromport])) {
+			$index = $serverbyip[$fromip][$fromport];
+			$server =& $servers[$index];
+			$resp = unpack("Vtimems/Cnclients", substr($data, 7, 5));
+			if ($server['ping'] < 0) {
+				// discard first ping and request again
+				$server['ping'] = 0;
+				$server['nclients'] = $resp['nclients'];
+				send_ping_with_num_clients($sock, $fromip, $fromport);
+			} else {
+				$timems = intval(gettimeofday(TRUE) * 1000) % 86400000;
+				$server['ping'] = $timems - $resp['timems'];
+				send_request($sock, CLM_REQ_VERSION_AND_OS, $fromip, $fromport);
+				if ($server['nclients'] = $resp['nclients']) {
+					send_request($sock, CLM_REQ_CONN_CLIENTS_LIST, $fromip, $fromport);
+				}
 			}
+		} else {
+			error_log("Unexpected message from $fromip:$fromport\n");
 		}
 
 		break;
 	case CLM_CONN_CLIENTS_LIST:
-		$index = $serverbyip[$fromip][$fromport];
-		$server =& $servers[$index];
-		$clients = array();
+		if (isset($serverbyip[$fromip][$fromport])) {
+			$index = $serverbyip[$fromip][$fromport];
+			$server =& $servers[$index];
+			$clients = array();
 
-		for ($i = 7; $i < $n-2;) {
-			$client = unpack("Cchanid/vcountry/Vinstrument/Cskill/Vnumip/vlen", substr($data, $i, 14)); $i += 14;
-			$client['country'] = $countries[$client['country']];
-			$client['instrument'] = $instruments[$client['instrument']];
-			$client['skill'] = $skills[$client['skill']];
-			$len = $client['len']; unset($client['len']);
-			$a = unpack("a${len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
-			$client['name'] = $a['name'];
-			$len = $a['len'];
-			$a = unpack("a${len}city", substr($data, $i, $len)); $i += $len;
-			$client['city'] = $a['city'];
-			$client['ip'] = long2ip($client['numip']);
-			$clients[] = $client;
+			for ($i = 7; $i < $n-2;) {
+				$client = unpack("Cchanid/vcountry/Vinstrument/Cskill/Vnumip/vlen", substr($data, $i, 14)); $i += 14;
+				$client['country'] = $countries[$client['country']];
+				$client['instrument'] = $instruments[$client['instrument']];
+				$client['skill'] = $skills[$client['skill']];
+				$len = $client['len']; unset($client['len']);
+				$a = unpack("a${len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
+				$client['name'] = $a['name'];
+				$len = $a['len'];
+				$a = unpack("a${len}city", substr($data, $i, $len)); $i += $len;
+				$client['city'] = $a['city'];
+				$client['ip'] = long2ip($client['numip']);
+				$clients[] = $client;
+			}
+			$server['clients'] = $clients;
+			$clientcount += count($clients);
+		} else {
+			error_log("Unexpected message from $fromip:$fromport\n");
 		}
-		$server['clients'] = $clients;
-		$clientcount += count($clients);
 		break;
 	case CLM_VERSION_AND_OS:
-		$index = $serverbyip[$fromip][$fromport];
-		$server =& $servers[$index];
-		$resp = unpack("Cos/vlen", substr($data, 7, 3)); $i = 10;
-		$len = $resp['len'];
-		$a = unpack("a${len}version", substr($data, $i, $len)); $i += $len;
-		$server['os'] = $opsys[$resp['os']];
-		$server['version'] = $a['version'];
+		if (isset($serverbyip[$fromip][$fromport])) {
+			$index = $serverbyip[$fromip][$fromport];
+			$server =& $servers[$index];
+			$resp = unpack("Cos/vlen", substr($data, 7, 3)); $i = 10;
+			$len = $resp['len'];
+			$a = unpack("a${len}version", substr($data, $i, $len)); $i += $len;
+			$server['os'] = $opsys[$resp['os']];
+			$server['version'] = $a['version'];
+		} else {
+			error_log("Unexpected message from $fromip:$fromport\n");
+		}
 		break;
 	}
 }
@@ -642,6 +693,7 @@ if ($tmp) {
 	fclose($tmp);
 	// now move the new data into place atomically
 	rename($tmpfile, $cachefile);
+	unset($tmpfile);	// no need to cleanup now
 }
 ob_end_flush();
 ?>
