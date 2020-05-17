@@ -35,7 +35,7 @@ for(;;) {
 	}
 
 	// otherwise, try to create temp file for new data
-	if ($tmp = fopen($tmpfile, 'x'))
+	if ($tmp = @fopen($tmpfile, 'x'))
 		break;  // we have the temp file, so fetch new data
 
 	// wait 200ms and check cache file again (another request was building it)
