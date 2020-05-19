@@ -636,7 +636,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$clients = array();
 
 			for ($i = 7; $i < $n-2;) {
-				$client = unpack("Cchanid/vcountry/Vinstrument/Cskill/Vnumip/vlen", substr($data, $i, 14)); $i += 14;
+				$client = unpack("Cchanid/vcountry/Vinstrument/Cskill/Vip/vlen", substr($data, $i, 14)); $i += 14;
 				$client['country'] = $countries[$client['country']];
 				$client['instrument'] = $instruments[$client['instrument']];
 				$client['skill'] = $skills[$client['skill']];
@@ -646,7 +646,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 				$len = $a['len'];
 				$a = unpack("a${len}city", substr($data, $i, $len)); $i += $len;
 				$client['city'] = $a['city'];
-				$client['ip'] = long2ip($client['numip']);
+				$client['ip'] = preg_replace('/\.\d+$/','.x',long2ip($client['ip']));
 				$clients[] = $client;
 			}
 			$server['clients'] = $clients;
