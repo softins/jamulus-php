@@ -588,6 +588,20 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$index = $serverbyip[$fromip][$fromport];
 			$server =& $servers[$index];
 			$server['NAT'] = true;
+		} elseif (false && isset($serverbyip[$fromip])) {
+			// must be the same host - set the first one that isn't already set
+			foreach ($serverbyip[$fromip] as $port => $index) {
+				$server =& $servers[$index];
+				if (!isset($server['NAT2'])) {
+					$server['NAT2'] = $fromport;
+					$server['NAT'] = true;
+					$server['port'] = $fromport;
+					$serverbyip[$fromip][$fromport] = $index;
+					unset($serverbyip[$fromip][$port]);
+					send_ping_with_num_clients($sock, $server['ip'], $server['port']);
+					break;
+				}
+			}
 		} else {
 			error_log("Unexpected message from $fromip:$fromport\n");
 		}
