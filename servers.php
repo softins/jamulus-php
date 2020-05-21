@@ -562,7 +562,6 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 				$server['ip'] = long2ip($server['numip']);
 			}
 			$server['ping'] = -1;
-			$server['NAT'] = false;
 			$server['os'] = '';
 			$server['version'] = '';
 			$servers[] = $server;
@@ -587,14 +586,12 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		if (isset($serverbyip[$fromip][$fromport])) {
 			$index = $serverbyip[$fromip][$fromport];
 			$server =& $servers[$index];
-			$server['NAT'] = true;
 		} elseif (false && isset($serverbyip[$fromip])) {
 			// must be the same host - set the first one that isn't already set
 			foreach ($serverbyip[$fromip] as $port => $index) {
 				$server =& $servers[$index];
-				if (!isset($server['NAT2'])) {
-					$server['NAT2'] = $fromport;
-					$server['NAT'] = true;
+				if (!isset($server['port2'])) {
+					$server['port2'] = $fromport;
 					$server['port'] = $fromport;
 					$serverbyip[$fromip][$fromport] = $index;
 					unset($serverbyip[$fromip][$port]);
