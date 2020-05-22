@@ -16,6 +16,7 @@ if (!isset($_GET['central'])) {
 	echo '[]';	// send empty body
 	exit;	// send empty body
 	//$_GET['central'] = 'jamulus.fischvolk.de:22124';
+	//$_GET['central'] = 'centralrock.drealm.info:22124';
 }
 
 list($host, $port) = explode(':', $_GET['central']);
@@ -68,6 +69,8 @@ $servers = array();
 $serverbyip = array();
 $clientcount = 0;
 
+define('CLIENT_PORT', 22134);			// Use same default port as a real client
+define('CLIENT_PORTS_TO_TRY', 5);		// Number of consecutive ports to try before giving up
 define('ILLEGAL', 0);				// illegal ID
 define('ACKN', 1);				// acknowledge
 define('JITT_BUF_SIZE', 10);			// jitter buffer size
@@ -400,7 +403,17 @@ $instruments = array(
 	25 => 'Listener',
 	26 => 'Guitar Vocal',
 	27 => 'Keyboard Vocal',
-	28 => 'Bodhran'
+	28 => 'Bodhran',
+	29 => 'Bassoon',
+	30 => 'Oboe',
+	31 => 'Harp',
+	32 => 'Viola',
+	33 => 'Congas',
+	34 => 'Bongo',
+	35 => 'Vocal Bass',
+	36 => 'Vocal Tenor',
+	37 => 'Vocal Alto',
+	38 => 'Vocal Soprano'
 );
 
 $skills = array(
@@ -670,6 +683,12 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 //-----------------------------------------------------------------------------
 
 $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
+
+for ($clientport = CLIENT_PORT; $clientport < CLIENT_PORT + CLIENT_PORTS_TO_TRY; $clientport++) {
+	if (socket_bind($sock, '0.0.0.0', $clientport)) {
+		break;
+	}
+}
 
 socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>3, 'usec'=>0));
 
