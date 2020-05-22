@@ -69,8 +69,11 @@ $servers = array();
 $serverbyip = array();
 $clientcount = 0;
 
+// source ports to use
 define('CLIENT_PORT', 22134);			// Use same default port as a real client
-define('CLIENT_PORTS_TO_TRY', 5);		// Number of consecutive ports to try before giving up
+define('CLIENT_PORTS_TO_TRY', 6);		// Number of consecutive ports to try before giving up
+
+// message IDs
 define('ILLEGAL', 0);				// illegal ID
 define('ACKN', 1);				// acknowledge
 define('JITT_BUF_SIZE', 10);			// jitter buffer size
@@ -685,7 +688,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
 
 for ($clientport = CLIENT_PORT; $clientport < CLIENT_PORT + CLIENT_PORTS_TO_TRY; $clientport++) {
-	if (socket_bind($sock, '0.0.0.0', $clientport)) {
+	if (@socket_bind($sock, '0.0.0.0', $clientport)) {
 		break;
 	}
 }
