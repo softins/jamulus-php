@@ -613,7 +613,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 				}
 			}
 		} else {
-			error_log("Unexpected message from $fromip:$fromport\n");
+			error_log("Unexpected CLM_EMPTY_MESSAGE from $fromip:$fromport");
 		}
 		break;
 	case CLM_PING_MS_WITHNUMCLIENTS:
@@ -635,7 +635,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 				}
 			}
 		} else {
-			error_log("Unexpected message from $fromip:$fromport\n");
+			error_log("Unexpected CLM_PING_MS_WITHNUMCLIENTS from $fromip:$fromport");
 		}
 
 		break;
@@ -662,7 +662,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$server['clients'] = $clients;
 			$clientcount += count($clients);
 		} else {
-			error_log("Unexpected message from $fromip:$fromport\n");
+			error_log("Unexpected CLM_CONN_CLIENTS_LIST from $fromip:$fromport");
 		}
 		break;
 	case CLM_VERSION_AND_OS:
@@ -675,7 +675,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$server['os'] = $opsys[$resp['os']];
 			$server['version'] = $a['version'];
 		} else {
-			error_log("Unexpected message from $fromip:$fromport\n");
+			error_log("Unexpected CLM_VERSION_AND_OS from $fromip:$fromport\n");
 		}
 		break;
 	}
