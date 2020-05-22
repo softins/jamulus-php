@@ -599,16 +599,16 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		if (isset($serverbyip[$fromip][$fromport])) {
 			$index = $serverbyip[$fromip][$fromport];
 			$server =& $servers[$index];
-		} elseif (false && isset($serverbyip[$fromip])) {
+		} elseif (isset($serverbyip[$fromip])) {
 			// must be the same host - set the first one that isn't already set
 			foreach ($serverbyip[$fromip] as $port => $index) {
 				$server =& $servers[$index];
 				if (!isset($server['port2'])) {
 					$server['port2'] = $fromport;
-					$server['port'] = $fromport;
+					//$server['port'] = $fromport;
 					$serverbyip[$fromip][$fromport] = $index;
-					unset($serverbyip[$fromip][$port]);
-					send_ping_with_num_clients($sock, $server['ip'], $server['port']);
+					//unset($serverbyip[$fromip][$port]);
+					send_ping_with_num_clients($sock, $fromip, $fromport);
 					break;
 				}
 			}
