@@ -50,6 +50,8 @@ for(;;) {
 		exit;
 	}
 
+	clearstatcache();	// make sure we don't cache the mtime
+
 	// otherwise, try to create temp file for new data
 	if ($tmp = @fopen($tmpfile, 'x'))
 		break;  // we have the temp file, so fetch new data
@@ -696,7 +698,7 @@ for ($clientport = CLIENT_PORT; $clientport < CLIENT_PORT + CLIENT_PORTS_TO_TRY;
 	}
 }
 
-socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>3, 'usec'=>0));
+socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>1, 'usec'=>500000));
 
 send_request($sock, CLM_REQ_SERVER_LIST, $ip, $port);
 
