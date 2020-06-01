@@ -46,6 +46,7 @@ for(;;) {
 	// Serve from the cache if it is younger than $cachetime
 	if (file_exists($cachefile) && time() < filemtime($cachefile) + $cachetime) {
 		readfile($cachefile);
+		// error_log(sprintf("Served cache for %s to %s", $_GET['central'], $_SERVER['REMOTE_ADDR']));
 		exit;
 	}
 
@@ -62,6 +63,8 @@ for(;;) {
 }
 
 register_shutdown_function('cleanup');	// ensure temp file gets deleted if we abort
+
+// error_log(sprintf("Fetching new data for %s to %s", $_GET['central'], $_SERVER['REMOTE_ADDR']));
 
 ob_start();	// start the output buffer
 
@@ -697,12 +700,20 @@ socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>3, 'usec'=>0));
 
 send_request($sock, CLM_REQ_SERVER_LIST, $ip, $port);
 
+// $maxgap = 0;
+// $last = gettimeofday(true);
+
 while ($n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport)) {
 	// printf("socket_recvfrom: %d bytes received from %s:%d\n", $n, $fromip, $fromport);
 
 	if ($n != strlen($data)) {
 		die("Returned data length does not match string");
 	}
+
+	// $now = gettimeofday(true);
+
+	// if ($now - $last > $maxgap) $maxgap = $now - $last;
+	// $last = $now;
 
 	process_received($sock, $data, $n, $fromip, $fromport);
 }
@@ -713,6 +724,8 @@ while ($n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport)) {
 // printf("%d clients total\n", $clientcount);
 
 socket_close($sock);
+
+// error_log(sprintf("Max gap between responses = %d ms (%s) for %s", $maxgap * 1000, $_GET['central'], $_SERVER['REMOTE_ADDR']));
 
 for ($i = 0, $size = count($servers); $i < $size; $i++) {
 	$servers[$i]['index'] = $i;
