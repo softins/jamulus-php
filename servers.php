@@ -664,7 +664,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 				$len = $a['len'];
 				$a = unpack("a${len}city", substr($data, $i, $len)); $i += $len;
 				$client['city'] = $a['city'];
-				$client['ip'] = preg_replace('/\.\d+$/','.x',long2ip($client['ip']));
+				unset($client['ip']);	// no longer sent by server from 3.5.6 onwards
 				$clients[] = $client;
 			}
 			$server['clients'] = $clients;
