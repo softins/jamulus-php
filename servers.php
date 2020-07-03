@@ -12,23 +12,37 @@ if (isset($_SERVER['HTTP_ORIGIN'])) {
 
 header('Content-Type: application/json');
 
-if (!isset($_GET['central'])) {
-	echo '[]';	// send empty body
-	exit;	// send empty body
+if (isset($_GET['central'])) {
+	@list($host, $port) = explode(':', $_GET['central']);
+	$cachefile = '/tmp/central-';
+} elseif (isset($_GET['server'])) {
+	@list($host, $port) = explode(':', $_GET['server']);
+	$cachefile = '/tmp/server-';
+} else {
+	echo "{'error':'No central or server specified'}";	// send error message
+	exit;
 	//$_GET['central'] = 'jamulus.fischvolk.de:22124';
 	//$_GET['central'] = 'centralrock.drealm.info:22124';
 }
 
-list($host, $port) = explode(':', $_GET['central']);
-$port = (int)$port;
+if (isset($port)) {
+	$port = (int)$port;
+} else {
+	$port = 22124;
+}
 $ip = gethostbyname($host);
 $numip = ip2long($ip);
+
+if ($numip === false) {
+	echo "{'error':'Invalid hostname ".$host."'}";	// send error message
+	exit;
+}
 
 $listcomplete = false; // need to get the whole list before any other messages
 $msgqueue = array();
 
 // define the cache file
-$cachefile = '/tmp/cached-'.$host.'-'.$port.'.json';
+$cachefile .= $host.'-'.$port.'.json';
 $cachetime = 10;	// 10 seconds - to keep up-to-date, but avoid multiple clients hammering servers
 
 // and a temporary file for refreshing it - this will be created with exclusive lock to avoid multiple writers
@@ -700,7 +714,14 @@ for ($clientport = CLIENT_PORT; $clientport < CLIENT_PORT + CLIENT_PORTS_TO_TRY;
 
 socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>1, 'usec'=>500000));
 
-send_request($sock, CLM_REQ_SERVER_LIST, $ip, $port);
+if (isset($_GET['central'])) {
+	send_request($sock, CLM_REQ_SERVER_LIST, $ip, $port);
+} else {
+	$servers = array(array('index' => 0, 'numip' => $numip, 'ip' => $ip, 'port' => $port));
+	$serverbyip[$ip][$port] = 0;
+	$listcomplete = true;
+	send_ping_with_num_clients($sock, $ip, $port);
+}
 
 // $maxgap = 0;
 // $last = gettimeofday(true);
