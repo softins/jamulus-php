@@ -754,7 +754,10 @@ for ($i = 0, $size = count($servers); $i < $size; $i++) {
 	$servers[$i]['index'] = $i;
 }
 
-print json_encode($servers, /* JSON_PRETTY_PRINT |*/ JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$pretty = isset($_GET['pretty']) ? JSON_PRETTY_PRINT : 0;
+
+print json_encode($servers, $pretty | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+print "\n";
 
 // cache the contents
 if ($tmp) {
