@@ -447,7 +447,7 @@ $instruments = array(
 	41 => 'Ukulele',
 	42 => 'Bass Ukulele',
 	43 => 'Vocal Baritone',
-	44 => 'Vocal Lead',
+	44 => 'Vocal Lead'
 );
 
 $skills = array(
