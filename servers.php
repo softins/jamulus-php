@@ -114,6 +114,11 @@ define('CHANNEL_INFOS', 25);			// set channel infos
 define('OPUS_SUPPORTED', 26);			// tells that OPUS codec is supported
 define('LICENCE_REQUIRED', 27);			// licence required
 define('REQ_CHANNEL_LEVEL_LIST', 28);		// request the channel level list
+define('VERSION_AND_OS', 29);	// version number and operating system
+define('CHANNEL_PAN', 30);	// set channel pan for mix
+define('MUTE_STATE_CHANGED', 31);	// mute state of your signal at another client has changed
+define('CLIENT_ID', 32);	// current user ID and server status
+define('RECORDER_STATE', 33);	// contains the state of the jam recorder (ERecorderState)
 define('CLM_PING_MS', 1001);			// for measuring ping time
 define('CLM_PING_MS_WITHNUMCLIENTS', 1002);	// for ping time and num. of clients info
 define('CLM_SERVER_FULL', 1003);		// server full message
@@ -130,6 +135,7 @@ define('CLM_CONN_CLIENTS_LIST', 1013);		// channel infos for connected clients
 define('CLM_REQ_CONN_CLIENTS_LIST', 1014);	// request the connected clients list
 define('CLM_CHANNEL_LEVEL_LIST', 1015);		// channel level list
 define('CLM_REGISTER_SERVER_RESP', 1016);	// status of server registration request
+define('CLM_REGISTER_SERVER_EX', 1017);	// register server with extended information
 
 $countries = array(
 	0 => '-',
@@ -435,7 +441,13 @@ $instruments = array(
 	35 => 'Vocal Bass',
 	36 => 'Vocal Tenor',
 	37 => 'Vocal Alto',
-	38 => 'Vocal Soprano'
+	38 => 'Vocal Soprano',
+	39 => 'Banjo',
+	40 => 'Mandolin',
+	41 => 'Ukulele',
+	42 => 'Bass Ukulele',
+	43 => 'Vocal Baritone',
+	44 => 'Vocal Lead',
 );
 
 $skills = array(
