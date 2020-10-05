@@ -708,6 +708,11 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$a = unpack("a${len}version", substr($data, $i, $len)); $i += $len;
 			$server['os'] = $opsys[$resp['os']];
 			$server['version'] = $a['version'];
+			if (preg_match('/(\d+)\.(\d+)\.(\d+)(.*)/',$a['version'],$m)) {
+				$server['versionsort'] = sprintf("%03d%03d%03d%s", $m[1], $m[2], $m[3], $m[4]);
+			} else {
+				$server['versionsort'] = '';
+			}
 		} else {
 			error_log("Unexpected CLM_VERSION_AND_OS from $fromip:$fromport\n");
 		}
