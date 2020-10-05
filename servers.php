@@ -12,12 +12,14 @@ if (isset($_SERVER['HTTP_ORIGIN'])) {
 
 header('Content-Type: application/json');
 
+$pretty = isset($_GET['pretty']) ? 'p-' : '';
+
 if (isset($_GET['central'])) {
 	@list($host, $port) = explode(':', $_GET['central']);
-	$cachefile = '/tmp/central-';
+	$cachefile = '/tmp/central-' . $pretty;
 } elseif (isset($_GET['server'])) {
 	@list($host, $port) = explode(':', $_GET['server']);
-	$cachefile = '/tmp/server-';
+	$cachefile = '/tmp/server-' . $pretty;
 } else {
 	echo "{'error':'No central or server specified'}";	// send error message
 	exit;
@@ -611,6 +613,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$server['ping'] = -1;
 			$server['os'] = '';
 			$server['version'] = '';
+			$server['versionsort'] = '';
 			$servers[] = $server;
 		}
 
@@ -710,8 +713,6 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$server['version'] = $a['version'];
 			if (preg_match('/(\d+)\.(\d+)\.(\d+)(.*)/',$a['version'],$m)) {
 				$server['versionsort'] = sprintf("%03d%03d%03d%s", $m[1], $m[2], $m[3], $m[4]);
-			} else {
-				$server['versionsort'] = '';
 			}
 		} else {
 			error_log("Unexpected CLM_VERSION_AND_OS from $fromip:$fromport\n");
