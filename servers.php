@@ -735,7 +735,7 @@ socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>1, 'usec'=>500000
 if (isset($_GET['central'])) {
 	send_request($sock, CLM_REQ_SERVER_LIST, $ip, $port);
 } else {
-	$servers = array(array('index' => 0, 'name' => $host, 'numip' => $numip, 'ip' => $ip, 'port' => $port));
+	$servers = array(array('index' => 0, 'name' => $host, 'numip' => $numip, 'ip' => $ip, 'port' => $port, 'ping' => -1, 'os' => '', 'version' => '', 'versionsort' => ''));
 	$serverbyip[$ip][$port] = 0;
 	$listcomplete = true;
 	send_ping_with_num_clients($sock, $ip, $port);
