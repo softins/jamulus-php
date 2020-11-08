@@ -21,7 +21,7 @@ if (isset($_GET['central'])) {
 	@list($host, $port) = explode(':', $_GET['server']);
 	$cachefile = '/tmp/server-' . $pretty;
 } else {
-	echo "{'error':'No central or server specified'}";	// send error message
+	echo '{"error":"No central or server specified"}';	// send error message
 	exit;
 	//$_GET['central'] = 'jamulus.fischvolk.de:22124';
 	//$_GET['central'] = 'centralrock.drealm.info:22124';
@@ -36,7 +36,7 @@ $ip = gethostbyname($host);
 $numip = ip2long($ip);
 
 if ($numip === false) {
-	echo "{'error':'Invalid hostname ".$host."'}";	// send error message
+	echo '{"error":"Invalid hostname '.$host.'"}';	// send error message
 	exit;
 }
 
