@@ -772,7 +772,12 @@ socket_close($sock);
 // error_log(sprintf("Max gap between responses = %d ms (%s) for %s", $maxgap * 1000, $_GET['central'], $_SERVER['REMOTE_ADDR']));
 
 for ($i = 0, $size = count($servers); $i < $size; $i++) {
-	$servers[$i]['index'] = $i;
+	if ($servers[$i]['ping'] < 0 && !isset($_GET['central'])) {
+		// no reply from a single server - delete it
+		unset($servers[$i]);
+	} else {
+		$servers[$i]['index'] = $i;
+	}
 }
 
 $pretty = isset($_GET['pretty']) ? JSON_PRETTY_PRINT : 0;
