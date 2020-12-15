@@ -415,7 +415,7 @@ $countries = array(
 
 $instruments = array(
 	0 => '-',
-	1 => 'Drum Set',
+	1 => 'Drums',
 	2 => 'Djembe',
 	3 => 'Electric Guitar',
 	4 => 'Acoustic Guitar',
