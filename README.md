@@ -10,3 +10,9 @@ Can also be invoked as `servers.php?server=individual.server.host:port`, which w
 return data just for the specified individual server. Note that in this case,
 the server name, city and country cannot be returned, as they are only available
 from a central server.
+
+Finally, it is possible to query a server's welcome message using
+`servers.php?query=individual.server.host:port`, which will briefly initiate
+an audio connection to the server, collect any welcome message returned,
+and disconnect again. This happens quickly, so no additional client is displayed
+to the other clients, but if a server is already full, it does not work.
