@@ -23,7 +23,10 @@ header('Content-Type: application/json');
 
 $pretty = isset($_GET['pretty']) ? 'p-' : '';
 
-if (isset($_GET['central'])) {
+if (isset($_GET['query'])) {
+	@list($host, $port) = explode(':', $_GET['query']);
+  $cachefile = '/tmp/query-' . $pretty;
+} elseif (isset($_GET['central'])) {
 	@list($host, $port) = explode(':', $_GET['central']);
 	$cachefile = '/tmp/central-' . $pretty;
 } elseif (isset($_GET['server'])) {
@@ -49,6 +52,7 @@ if ($numip === false) {
 	exit;
 }
 
+$done = false;
 $listcomplete = false; // need to get the whole list before any other messages
 $msgqueue = array();
 
@@ -130,6 +134,9 @@ define('CHANNEL_PAN', 30);	// set channel pan for mix
 define('MUTE_STATE_CHANGED', 31);	// mute state of your signal at another client has changed
 define('CLIENT_ID', 32);	// current user ID and server status
 define('RECORDER_STATE', 33);	// contains the state of the jam recorder (ERecorderState)
+define('REQ_SPLIT_MESS_SUPPORT', 34); // request support for split messages
+define('SPLIT_MESS_SUPPORTED', 35); // split messages are supported
+define('CLM_START', 1000);			// start of connectionless messages
 define('CLM_PING_MS', 1001);			// for measuring ping time
 define('CLM_PING_MS_WITHNUMCLIENTS', 1002);	// for ping time and num. of clients info
 define('CLM_SERVER_FULL', 1003);		// server full message
@@ -147,6 +154,7 @@ define('CLM_REQ_CONN_CLIENTS_LIST', 1014);	// request the connected clients list
 define('CLM_CHANNEL_LEVEL_LIST', 1015);		// channel level list
 define('CLM_REGISTER_SERVER_RESP', 1016);	// status of server registration request
 define('CLM_REGISTER_SERVER_EX', 1017);	// register server with extended information
+define('CLM_RED_SERVER_LIST', 1018); // reduced server list
 
 $countries = array(
 	0 => '-',
@@ -519,6 +527,42 @@ class CRC {
 }
 
 //-----------------------------------------------------------------------------
+// send a silent audio frame
+//-----------------------------------------------------------------------------
+function send_audio($sock, $size, $ip, $port) {
+	$data = pack("CCCa".($size-3), 0, 255, 254, '');
+
+	//print chunk_split(bin2hex($data),2,' ')."\n";
+
+	$n = socket_sendto($sock, $data, strlen($data), 0, $ip, $port);
+
+	if ($n === false) {
+		die("Send error: ".socket_strerror(socket_last_error()));
+	}
+}
+
+
+//-----------------------------------------------------------------------------
+// send an ackn message
+//-----------------------------------------------------------------------------
+function send_ackn($sock, $cnt, $id, $ip, $port) {
+	$data = pack('vvCvv', 0, ACKN, $cnt, 2, $id);
+
+	// need to calculate CRC
+	$crc = new CRC($data);
+	$data .= pack('v', $crc->Get());
+	unset($crc);
+
+	// print chunk_split(bin2hex($data),2,' ')."\n";
+
+	$n = socket_sendto($sock, $data, strlen($data), 0, $ip, $port);
+
+	if ($n === false) {
+		die("Send error: ".socket_strerror(socket_last_error()));
+	}
+}
+
+//-----------------------------------------------------------------------------
 // send a request message
 //-----------------------------------------------------------------------------
 function send_request($sock, $id, $ip, $port) {
@@ -570,7 +614,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 	global $servers, $serverbyip;
 	global $clientcount;
 	global $countries, $instruments, $skills, $opsys;
-	global $listcomplete, $msgqueue;
+	global $listcomplete, $msgqueue, $done;
 
 	// print chunk_split(bin2hex($data),2,' ')."\n";
 
@@ -599,20 +643,95 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		return;
 	}
 
+	// acknowledge message if it needs it
+	if ($r['id'] < CLM_START && $r['id'] > ACKN) {
+		send_ackn($sock, $r['cnt'], $r['id'], $fromip, $fromport);
+	}
+
 	switch($r['id']) {
+	case REQ_SPLIT_MESS_SUPPORT:
+	case REQ_NETW_TRANSPORT_PROPS:
+	case REQ_JITT_BUF_SIZE:
+	case REQ_CHANNEL_INFOS:
+		break;
+
+	case CHAT_TEXT:
+		if (isset($serverbyip[$fromip][$fromport])) {
+			$index = $serverbyip[$fromip][$fromport];
+			$server =& $servers[$index];
+			$resp = unpack("vlen", substr($data, 7, 2)); $i = 9;
+			$len = $resp['len'];
+			$a = unpack("a{$len}welcome", substr($data, $i, $len)); $i += $len;
+			$server['welcome'] = $a['welcome'];
+			unset($server);
+		} else {
+			error_log("Unexpected CHAT_TEXT from $fromip:$fromport");
+		}
+
+		break;
+
+	case VERSION_AND_OS:
+		if (isset($serverbyip[$fromip][$fromport])) {
+			$index = $serverbyip[$fromip][$fromport];
+			$server =& $servers[$index];
+			$resp = unpack("Cos/vlen", substr($data, 7, 3)); $i = 10;
+			$len = $resp['len'];
+			$a = unpack("a{$len}version", substr($data, $i, $len)); $i += $len;
+			$server['os'] = $opsys[$resp['os']];
+			$server['version'] = $a['version'];
+			if (preg_match('/(\d+)\.(\d+)\.(\d+)(.*)/',$a['version'],$m)) {
+				$server['versionsort'] = sprintf("%03d%03d%03d%s", $m[1], $m[2], $m[3], $m[4]);
+			}
+			unset($server);
+		} else {
+			error_log("Unexpected VERSION_AND_OS from $fromip:$fromport\n");
+		}
+
+		break;
+
+	case RECORDER_STATE:
+		if (isset($serverbyip[$fromip][$fromport])) {
+			$index = $serverbyip[$fromip][$fromport];
+			$server =& $servers[$index];
+			$resp = unpack("Crecstate", substr($data, 7, 1));
+			$server['recstate'] = $resp['recstate'];
+			unset($server);
+		} else {
+			error_log("Unexpected RECORDER_STATE from $fromip:$fromport");
+		}
+
+		break;
+
+	case CLIENT_ID:
+		if (isset($serverbyip[$fromip][$fromport])) {
+			$index = $serverbyip[$fromip][$fromport];
+			$server =& $servers[$index];
+			$resp = unpack("Cclient_id", substr($data, 7, 1));
+			$server['client_id'] = $resp['client_id'];
+			unset($server);
+		} else {
+			error_log("Unexpected CLIENT_ID from $fromip:$fromport");
+		}
+
+		break;
+
+	case CLM_CHANNEL_LEVEL_LIST:
+		$done = true;
+		break;
+
 	case CLM_SERVER_LIST:
 
 		for ($i = 7; $i < $n-2;) {
 			$server = unpack("Vnumip/vport/vcountry/Cmaxclients/Cperm/vlen", substr($data, $i, 12)); $i += 12;
 			$server['country'] = $countries[$server['country']];
 			$len = $server['len']; unset($server['len']);
-			$a = unpack("a${len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
+			$a = unpack("a{$len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
 			$server['name'] = $a['name'];
 			$len = $a['len'];
-			$a = unpack("a${len}ipaddrs/vlen", substr($data, $i, $len+2)); $i += $len+2;
+			$a = unpack("a{$len}ipaddrs/vlen", substr($data, $i, $len+2)); $i += $len+2;
 			$server['ipaddrs'] = $a['ipaddrs'];
 			$len = $a['len'];
-			$a = unpack("a${len}city", substr($data, $i, $len+2)); $i += $len;
+			$a = unpack("a{$len}city", substr($data, $i, $len+2)); $i += $len;
 			$server['city'] = $a['city'];
 
 			if ($server['numip'] == 0 && $server['port'] == 0) {
@@ -646,8 +765,9 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		break;
 	case CLM_EMPTY_MESSAGE:
 		if (isset($serverbyip[$fromip][$fromport])) {
-			$index = $serverbyip[$fromip][$fromport];
-			$server =& $servers[$index];
+			//$index = $serverbyip[$fromip][$fromport];
+			//$server =& $servers[$index];
+			//unset($server);
 		} elseif (isset($serverbyip[$fromip])) {
 			// must be the same host - set the first one that isn't already set
 			foreach ($serverbyip[$fromip] as $port => $index) {
@@ -660,6 +780,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 					send_ping_with_num_clients($sock, $fromip, $fromport);
 					break;
 				}
+				unset($server);
 			}
 		} else {
 			error_log("Unexpected CLM_EMPTY_MESSAGE from $fromip:$fromport");
@@ -683,6 +804,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 					send_request($sock, CLM_REQ_CONN_CLIENTS_LIST, $fromip, $fromport);
 				}
 			}
+			unset($server);
 		} else {
 			error_log("Unexpected CLM_PING_MS_WITHNUMCLIENTS from $fromip:$fromport");
 		}
@@ -700,16 +822,20 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 				$client['instrument'] = $instruments[$client['instrument']];
 				$client['skill'] = $skills[$client['skill']];
 				$len = $client['len']; unset($client['len']);
-				$a = unpack("a${len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
+				$a = unpack("a{$len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
 				$client['name'] = $a['name'];
 				$len = $a['len'];
-				$a = unpack("a${len}city", substr($data, $i, $len)); $i += $len;
+				$a = unpack("a{$len}city", substr($data, $i, $len)); $i += $len;
 				$client['city'] = $a['city'];
 				unset($client['ip']);	// no longer sent by server from 3.5.6 onwards
 				$clients[] = $client;
 			}
 			$server['clients'] = $clients;
 			$clientcount += count($clients);
+			if (isset($_GET['server']) && $server['version'] != '') {
+				$done = true;
+			}
+			unset($server);
 		} else {
 			error_log("Unexpected CLM_CONN_CLIENTS_LIST from $fromip:$fromport");
 		}
@@ -720,12 +846,16 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$server =& $servers[$index];
 			$resp = unpack("Cos/vlen", substr($data, 7, 3)); $i = 10;
 			$len = $resp['len'];
-			$a = unpack("a${len}version", substr($data, $i, $len)); $i += $len;
+			$a = unpack("a{$len}version", substr($data, $i, $len)); $i += $len;
 			$server['os'] = $opsys[$resp['os']];
 			$server['version'] = $a['version'];
 			if (preg_match('/(\d+)\.(\d+)\.(\d+)(.*)/',$a['version'],$m)) {
 				$server['versionsort'] = sprintf("%03d%03d%03d%s", $m[1], $m[2], $m[3], $m[4]);
 			}
+			if (isset($_GET['server']) && ($server['nclients'] == 0 || isset($server['clients']))) {
+				$done = true;
+			}
+			unset($server);
 		} else {
 			error_log("Unexpected CLM_VERSION_AND_OS from $fromip:$fromport\n");
 		}
@@ -744,7 +874,12 @@ for ($clientport = CLIENT_PORT; $clientport < CLIENT_PORT + CLIENT_PORTS_TO_TRY;
 
 socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>1, 'usec'=>500000));
 
-if (isset($_GET['central'])) {
+if (isset($_GET['query'])) {
+	$servers = array(array('index' => 0, 'name' => $host, 'numip' => $numip, 'ip' => $ip, 'port' => $port, 'ping' => -1, 'os' => '', 'version' => '', 'versionsort' => ''));
+	$serverbyip[$ip][$port] = 0;
+	$listcomplete = true;
+	send_audio($sock, 25, $ip, $port);
+} elseif (isset($_GET['central'])) {
 	send_request($sock, CLM_REQ_SERVER_LIST, $ip, $port);
 } else {
 	$servers = array(array('index' => 0, 'name' => $host, 'numip' => $numip, 'ip' => $ip, 'port' => $port, 'ping' => -1, 'os' => '', 'version' => '', 'versionsort' => ''));
@@ -753,10 +888,14 @@ if (isset($_GET['central'])) {
 	send_ping_with_num_clients($sock, $ip, $port);
 }
 
+// set defaults in case we don't receive any packets
+$fromip = $ip;
+$fromport = $port;
+
 // $maxgap = 0;
 // $last = gettimeofday(true);
 
-while ($n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport)) {
+while (!$done && $n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport)) {
 	// printf("socket_recvfrom: %d bytes received from %s:%d\n", $n, $fromip, $fromport);
 
 	if ($n != strlen($data)) {
@@ -771,6 +910,12 @@ while ($n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport)) {
 	process_received($sock, $data, $n, $fromip, $fromport);
 }
 
+if (isset($_GET['query'])) {
+	// disconnect from server
+	send_request($sock, CLM_DISCONNECTION, $fromip, $fromport);
+	send_request($sock, CLM_DISCONNECTION, $fromip, $fromport);
+}
+
 // print_r($servers);
 
 // printf("%d servers total\n", count($servers));
@@ -781,7 +926,7 @@ socket_close($sock);
 // error_log(sprintf("Max gap between responses = %d ms (%s) for %s", $maxgap * 1000, $_GET['central'], $_SERVER['REMOTE_ADDR']));
 
 for ($i = 0, $size = count($servers); $i < $size; $i++) {
-	if ($servers[$i]['ping'] < 0 && !isset($_GET['central'])) {
+	if ($servers[$i]['ping'] < 0 && isset($_GET['server'])) {
 		// no reply from a single server - delete it
 		unset($servers[$i]);
 	} else {
