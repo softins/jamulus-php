@@ -667,6 +667,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		} else {
 			error_log("Unexpected CHAT_TEXT from $fromip:$fromport");
 		}
+		$done = true;	// received the welcome message
 
 		break;
 
@@ -686,6 +687,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		} else {
 			error_log("Unexpected VERSION_AND_OS from $fromip:$fromport\n");
 		}
+		$done = true;	// always comes after welcome message
 
 		break;
 
@@ -699,6 +701,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		} else {
 			error_log("Unexpected RECORDER_STATE from $fromip:$fromport");
 		}
+		$done = true;	// always comes after welcome message
 
 		break;
 
@@ -716,7 +719,6 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		break;
 
 	case CLM_CHANNEL_LEVEL_LIST:
-		$done = true;
 		break;
 
 	case CLM_SERVER_LIST:
