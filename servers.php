@@ -681,7 +681,14 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$server['os'] = $opsys[$resp['os']];
 			$server['version'] = $a['version'];
 			if (preg_match('/(\d+)\.(\d+)\.(\d+)(.*)/',$a['version'],$m)) {
-				$server['versionsort'] = sprintf("%03d%03d%03d%s", $m[1], $m[2], $m[3], $m[4]);
+				if ($m[4] == '') {
+					$k = '=';
+				} elseif (strncmp($m[4], 'rc', 2)==0 || strncmp($m[4], 'beta', 4)==0 || strncmp($m[4], 'alpha', 5)==0) {
+					$k = '<';
+				} else {
+					$k = '>';
+				}
+				$server['versionsort'] = sprintf("%03d%03d%03d%s%s", $m[1], $m[2], $m[3], $k, $m[4]);
 			}
 			unset($server);
 		} else {
@@ -852,7 +859,14 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$server['os'] = $opsys[$resp['os']];
 			$server['version'] = $a['version'];
 			if (preg_match('/(\d+)\.(\d+)\.(\d+)(.*)/',$a['version'],$m)) {
-				$server['versionsort'] = sprintf("%03d%03d%03d%s", $m[1], $m[2], $m[3], $m[4]);
+				if ($m[4] == '') {
+					$k = '=';
+				} elseif (strncmp($m[4], 'rc', 2)==0 || strncmp($m[4], 'beta', 4)==0 || strncmp($m[4], 'alpha', 5)==0) {
+					$k = '<';
+				} else {
+					$k = '>';
+				}
+				$server['versionsort'] = sprintf("%03d%03d%03d%s%s", $m[1], $m[2], $m[3], $k, $m[4]);
 			}
 			if (isset($_GET['server']) && ($server['nclients'] == 0 || isset($server['clients']))) {
 				$done = true;
