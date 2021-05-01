@@ -774,9 +774,13 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		break;
 	case CLM_EMPTY_MESSAGE:
 		if (isset($serverbyip[$fromip][$fromport])) {
-			//$index = $serverbyip[$fromip][$fromport];
-			//$server =& $servers[$index];
-			//unset($server);
+			$index = $serverbyip[$fromip][$fromport];
+			$server =& $servers[$index];
+			if ($server['ping'] < 0) {
+				// still waiting for ping reply - try again
+				send_ping_with_num_clients($sock, $fromip, $fromport);
+			}
+			unset($server);
 		} elseif (isset($serverbyip[$fromip])) {
 			// must be the same host - set the first one that isn't already set
 			foreach ($serverbyip[$fromip] as $port => $index) {
