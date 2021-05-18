@@ -23,20 +23,25 @@ header('Content-Type: application/json');
 
 $pretty = isset($_GET['pretty']) ? 'p-' : '';
 
-if (isset($_GET['query'])) {
-	@list($host, $port) = explode(':', $_GET['query']);
-  $cachefile = '/tmp/query-' . $pretty;
-} elseif (isset($_GET['central'])) {
-	@list($host, $port) = explode(':', $_GET['central']);
-	$cachefile = '/tmp/central-' . $pretty;
+// backward compatibility
+if (isset($_GET['central'])) {
+	$_GET['directory'] = $_GET['central'];
+	unset($_GET['central']);
+}
+
+if (isset($_GET['directory'])) {
+	@list($host, $port) = explode(':', $_GET['directory']);
+	$cachefile = '/tmp/directory-' . $pretty;
 } elseif (isset($_GET['server'])) {
 	@list($host, $port) = explode(':', $_GET['server']);
 	$cachefile = '/tmp/server-' . $pretty;
+} elseif (isset($_GET['query'])) {
+	@list($host, $port) = explode(':', $_GET['query']);
+  $cachefile = '/tmp/query-' . $pretty;
 } else {
-	echo '{"error":"No central or server specified"}';	// send error message
+	echo '{"error":"No directory or server specified"}';	// send error message
 	exit;
-	//$_GET['central'] = 'jamulus.fischvolk.de:22124';
-	//$_GET['central'] = 'centralrock.drealm.info:22124';
+	//$_GET['directory'] = 'private.jamulus.io:22124';
 }
 
 if (isset($port)) {
@@ -75,7 +80,7 @@ for(;;) {
 	// Serve from the cache if it is younger than $cachetime
 	if (file_exists($cachefile) && time() < filemtime($cachefile) + $cachetime) {
 		readfile($cachefile);
-		// error_log(sprintf("Served cache for %s to %s", $_GET['central'], $_SERVER['REMOTE_ADDR']));
+		// error_log(sprintf("Served cache for %s to %s", $_GET['directory'], $_SERVER['REMOTE_ADDR']));
 		exit;
 	}
 
@@ -95,7 +100,7 @@ for(;;) {
 
 register_shutdown_function('cleanup');	// ensure temp file gets deleted if we abort
 
-// error_log(sprintf("Fetching new data for %s to %s", $_GET['central'], $_SERVER['REMOTE_ADDR']));
+// error_log(sprintf("Fetching new data for %s to %s", $_GET['directory'], $_SERVER['REMOTE_ADDR']));
 
 ob_start();	// start the output buffer
 
@@ -899,7 +904,7 @@ if (isset($_GET['query'])) {
 	$serverbyip[$ip][$port] = 0;
 	$listcomplete = true;
 	send_audio($sock, 25, $ip, $port);
-} elseif (isset($_GET['central'])) {
+} elseif (isset($_GET['directory'])) {
 	send_request($sock, CLM_REQ_SERVER_LIST, $ip, $port);
 } else {
 	$servers = array(array('index' => 0, 'name' => $host, 'numip' => $numip, 'ip' => $ip, 'port' => $port, 'ping' => -1, 'os' => '', 'version' => '', 'versionsort' => ''));
@@ -943,7 +948,7 @@ if (isset($_GET['query'])) {
 
 socket_close($sock);
 
-// error_log(sprintf("Max gap between responses = %d ms (%s) for %s", $maxgap * 1000, $_GET['central'], $_SERVER['REMOTE_ADDR']));
+// error_log(sprintf("Max gap between responses = %d ms (%s) for %s", $maxgap * 1000, $_GET['directory'], $_SERVER['REMOTE_ADDR']));
 
 for ($i = 0, $size = count($servers); $i < $size; $i++) {
 	if ($servers[$i]['ping'] < 0 && isset($_GET['server'])) {
