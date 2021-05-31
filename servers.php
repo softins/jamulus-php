@@ -39,6 +39,7 @@ if (isset($_GET['directory'])) {
 	@list($host, $port) = explode(':', $_GET['query']);
   $cachefile = '/tmp/query-' . $pretty;
 } else {
+	header("HTTP/1.0 404 Not found");
 	echo '{"error":"No directory or server specified"}';	// send error message
 	exit;
 	//$_GET['directory'] = 'private.jamulus.io:22124';
@@ -53,6 +54,7 @@ $ip = gethostbyname($host);
 $numip = ip2long($ip);
 
 if ($numip === false) {
+	header("HTTP/1.0 404 Not found");
 	echo '{"error":"Invalid hostname '.$host.'"}';	// send error message
 	exit;
 }
@@ -620,6 +622,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 	global $clientcount;
 	global $countries, $instruments, $skills, $opsys;
 	global $listcomplete, $msgqueue, $done;
+	global $response;
 
 	// print chunk_split(bin2hex($data),2,' ')."\n";
 
@@ -899,6 +902,8 @@ for ($clientport = CLIENT_PORT; $clientport < CLIENT_PORT + CLIENT_PORTS_TO_TRY;
 
 socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>1, 'usec'=>500000));
 
+$response = false;
+
 if (isset($_GET['query'])) {
 	$servers = array(array('index' => 0, 'name' => $host, 'numip' => $numip, 'ip' => $ip, 'port' => $port, 'ping' => -1, 'os' => '', 'version' => '', 'versionsort' => ''));
 	$serverbyip[$ip][$port] = 0;
@@ -932,6 +937,8 @@ while (!$done && $n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport
 	// if ($now - $last > $maxgap) $maxgap = $now - $last;
 	// $last = $now;
 
+	$response = true;	// we received something
+
 	process_received($sock, $data, $n, $fromip, $fromport);
 }
 
@@ -954,9 +961,17 @@ for ($i = 0, $size = count($servers); $i < $size; $i++) {
 	if ($servers[$i]['ping'] < 0 && isset($_GET['server'])) {
 		// no reply from a single server - delete it
 		unset($servers[$i]);
+		$listcomplete = false;
 	} else {
 		$servers[$i]['index'] = $i;
 	}
+}
+
+if (!$listcomplete) {
+	// queried a directory server but did not get a list
+	header("HTTP/1.0 504 Gateway Timeout");
+	echo '{"error":"No response from server"}';	// send error message
+	exit;
 }
 
 $pretty = isset($_GET['pretty']) ? JSON_PRETTY_PRINT : 0;
