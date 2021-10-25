@@ -474,7 +474,8 @@ $instruments = array(
 	44 => 'Vocal Lead',
 	45 => 'Mountain Dulcimer',
 	46 => 'Scratching',
-	47 => 'Rapping'
+	47 => 'Rapping',
+	48 => 'Vibraphone'
 );
 
 $skills = array(
