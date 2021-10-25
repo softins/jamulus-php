@@ -683,7 +683,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$resp = unpack("Cos/vlen", substr($data, 7, 3)); $i = 10;
 			$len = $resp['len'];
 			$a = unpack("a{$len}version", substr($data, $i, $len)); $i += $len;
-			$server['os'] = $opsys[$resp['os']];
+			$server['os'] = array_key_exists($resp['os'], $opsys) ? $opsys[$resp['os']] : 'Unknown';
 			$server['version'] = $a['version'];
 			if (preg_match('/(\d+)\.(\d+)\.(\d+)(.*)/',$a['version'],$m)) {
 				if ($m[4] == '') {
@@ -737,7 +737,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 
 		for ($i = 7; $i < $n-2;) {
 			$server = unpack("Vnumip/vport/vcountry/Cmaxclients/Cperm/vlen", substr($data, $i, 12)); $i += 12;
-			$server['country'] = $countries[$server['country']];
+			$server['country'] = array_key_exists($server['country'], $countries) ? $countries[$server['country']] : 'Unknown';
 			$len = $server['len']; unset($server['len']);
 			$a = unpack("a{$len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
 			$server['name'] = $a['name'];
@@ -836,9 +836,9 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 
 			for ($i = 7; $i < $n-2;) {
 				$client = unpack("Cchanid/vcountry/Vinstrument/Cskill/Vip/vlen", substr($data, $i, 14)); $i += 14;
-				$client['country'] = $countries[$client['country']];
-				$client['instrument'] = $instruments[$client['instrument']];
-				$client['skill'] = $skills[$client['skill']];
+				$client['country'] = array_key_exists($client['country'], $countries) ? $countries[$client['country']] : 'Unknown';
+				$client['instrument'] = array_key_exists($client['instrument'], $instruments) ? $instruments[$client['instrument']] : 'Unknown';
+				$client['skill'] = array_key_exists($client['skill'], $skills) ? $skills[$client['skill']] : 'Unknown';
 				$len = $client['len']; unset($client['len']);
 				$a = unpack("a{$len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
 				$client['name'] = $a['name'];
@@ -865,7 +865,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$resp = unpack("Cos/vlen", substr($data, 7, 3)); $i = 10;
 			$len = $resp['len'];
 			$a = unpack("a{$len}version", substr($data, $i, $len)); $i += $len;
-			$server['os'] = $opsys[$resp['os']];
+			$server['os'] = array_key_exists($resp['os'], $opsys) ? $opsys[$resp['os']] : 'Unknown';
 			$server['version'] = $a['version'];
 			if (preg_match('/(\d+)\.(\d+)\.(\d+)(.*)/',$a['version'],$m)) {
 				if ($m[4] == '') {
