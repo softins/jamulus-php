@@ -110,7 +110,7 @@ $clientcount = 0;
 
 // source ports to use
 define('CLIENT_PORT', 22134);			// Use same default port as a real client
-define('CLIENT_PORTS_TO_TRY', 6);		// Number of consecutive ports to try before giving up
+define('CLIENT_PORTS_TO_TRY', 16);		// Number of consecutive ports to try before giving up
 
 // message IDs
 define('ILLEGAL', 0);				// illegal ID
