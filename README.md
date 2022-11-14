@@ -24,6 +24,6 @@ server replies coming from _any_ port, not just from the expected port to which
 a request was sent.
 
 To allow this, the `server.php` back-end sets its source port in a specific range,
-22134-22139 (See the defines for `CLIENT_PORT` and `CLIENT_PORTS_TO_TRY`).
+22134-22149 (See the defines for `CLIENT_PORT` and `CLIENT_PORTS_TO_TRY`).
 The system hosting the back-end needs to have its firewall configured to accept incoming
 traffic to that specific port range from _any_ IP address and _any_ port number.
