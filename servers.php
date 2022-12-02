@@ -513,7 +513,7 @@ class CRC {
 	var $bmask = 0x10000;	// 1 << 16
 	var $poly = 0x1020;	// (1 << 5) | (1 << 12)
 
-	function CRC($s = null) {
+	function __construct($s = null) {
 		$this->Reset();
 		if (isset($s)) {
 			$this->AddString($s);
