@@ -13,7 +13,7 @@ $origins = array(
 );
 
 // if running from command line for testing, copy args into $_GET
-if (is_array($_SERVER['argv'])) {
+if (array_key_exists('argv', $_SERVER) && is_array($_SERVER['argv'])) {
 	array_shift($_SERVER['argv']);	// discard filename
 
 	foreach ($_SERVER['argv'] as $arg) {
