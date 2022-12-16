@@ -24,5 +24,5 @@ if (isset($_SERVER['HTTP_ORIGIN'])) {
 
 header('Content-Type: application/json');
 
-readfile("http://18.133.158.130/jamulus-php-master/servers.php?" . $_SERVER['QUERY_STRING']);
+readfile("http://13.42.109.202/jamulus-php-master/servers.php?" . $_SERVER['QUERY_STRING']);
 ?>
