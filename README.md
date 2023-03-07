@@ -2,6 +2,7 @@
 PHP script to fetch info from Jamulus servers and return as JSON
 
 Used as a back-end by [Jamulus Explorer](https://github.com/softins/jamulus-web)
+and [Jamulus.Live](https://jamulus.live).
 
 Normally invoked as `servers.php?directory=directory.server.host:port`, which will
 return data for all servers registered with that directory server.
