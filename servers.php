@@ -557,7 +557,7 @@ function send_audio($sock, $size, $ip, $port) {
 	$n = socket_sendto($sock, $data, strlen($data), 0, $ip, $port);
 
 	if ($n === false) {
-		die("Send error: ".socket_strerror(socket_last_error()));
+		error_log("Send error to $ip:$port: ".socket_strerror(socket_last_error()));
 	}
 }
 
@@ -578,7 +578,7 @@ function send_ackn($sock, $cnt, $id, $ip, $port) {
 	$n = socket_sendto($sock, $data, strlen($data), 0, $ip, $port);
 
 	if ($n === false) {
-		die("Send error: ".socket_strerror(socket_last_error()));
+		error_log("Send error to $ip:$port: ".socket_strerror(socket_last_error()));
 	}
 }
 
@@ -598,7 +598,7 @@ function send_request($sock, $id, $ip, $port) {
 	$n = socket_sendto($sock, $data, strlen($data), 0, $ip, $port);
 
 	if ($n === false) {
-		die("Send error: ".socket_strerror(socket_last_error()));
+		error_log("Send error to $ip:$port: ".socket_strerror(socket_last_error()));
 	}
 }
 
@@ -622,7 +622,7 @@ function send_ping_with_num_clients($sock, $ip, $port) {
 	$n = socket_sendto($sock, $data, strlen($data), 0, $ip, $port);
 
 	if ($n === false) {
-		die("Send error: ".socket_strerror(socket_last_error()));
+		error_log("Send error to $ip:$port: ".socket_strerror(socket_last_error()));
 	}
 }
 
@@ -645,14 +645,16 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 	unset($crc);
 
 	if ($recvcrc != $calccrc) {
-		die("CRC mismatch in received message");
+		error_log("CRC mismatch in received message from $fromip:$fromport");
+		return;
 	}
 
 	$r = unpack("vtag/vid/Ccnt/vlen", substr($data, 0, 7));
 	// print_r($r);
 
 	if ($r['len']+9 != $n) {
-		die("Malformed packet - length mismatch");
+		error_log("Malformed packet - length mismatch from $fromip:$fromport");
+		return;
 	}
 
 	// print("ID=".$r['id']."\n");
@@ -939,7 +941,8 @@ while (!$done && $n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport
 	// printf("socket_recvfrom: %d bytes received from %s:%d\n", $n, $fromip, $fromport);
 
 	if ($n != strlen($data)) {
-		die("Returned data length does not match string");
+		error_log("Returned data length does not match string from $fromip:$fromport");
+		continue;
 	}
 
 	// $now = gettimeofday(true);
