@@ -753,8 +753,8 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 	case CLM_SERVER_LIST:
 
 		for ($i = 7; $i < $n-2;) {
-			$server = unpack("Vnumip/vport/vcountry/Cmaxclients/Cperm/vlen", substr($data, $i, 12)); $i += 12;
-			$server['country'] = array_key_exists($server['country'], $countries) ? $countries[$server['country']] : 'Unknown';
+			$server = unpack("Vnumip/vport/vcountryid/Cmaxclients/Cperm/vlen", substr($data, $i, 12)); $i += 12;
+			$server['country'] = array_key_exists($server['countryid'], $countries) ? $countries[$server['countryid']] : 'Unknown';
 			$len = $server['len']; unset($server['len']);
 			$a = unpack("a{$len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
 			$server['name'] = $a['name'];
@@ -852,10 +852,10 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$clients = array();
 
 			for ($i = 7; $i < $n-2;) {
-				$client = unpack("Cchanid/vcountry/Vinstrument/Cskill/Vip/vlen", substr($data, $i, 14)); $i += 14;
-				$client['country'] = array_key_exists($client['country'], $countries) ? $countries[$client['country']] : 'Unknown';
-				$client['instrument'] = array_key_exists($client['instrument'], $instruments) ? $instruments[$client['instrument']] : 'Unknown';
-				$client['skill'] = array_key_exists($client['skill'], $skills) ? $skills[$client['skill']] : 'Unknown';
+				$client = unpack("Cchanid/vcountryid/Vinstrumentid/Cskillid/Vip/vlen", substr($data, $i, 14)); $i += 14;
+				$client['country'] = array_key_exists($client['countryid'], $countries) ? $countries[$client['countryid']] : 'Unknown';
+				$client['instrument'] = array_key_exists($client['instrumentid'], $instruments) ? $instruments[$client['instrumentid']] : 'Unknown';
+				$client['skill'] = array_key_exists($client['skillid'], $skills) ? $skills[$client['skillid']] : 'Unknown';
 				$len = $client['len']; unset($client['len']);
 				$a = unpack("a{$len}name/vlen", substr($data, $i, $len+2)); $i += $len+2;
 				$client['name'] = $a['name'];
