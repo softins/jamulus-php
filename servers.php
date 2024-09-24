@@ -916,15 +916,17 @@ for ($clientport = CLIENT_PORT; $clientport < CLIENT_PORT + CLIENT_PORTS_TO_TRY;
 
 socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>1, 'usec'=>500000));
 
+$name = isset($_GET['name']) ? $_GET['name'] : $host;
+
 if (isset($_GET['query'])) {
-	$servers = array(array('index' => 0, 'name' => $host, 'numip' => $numip, 'ip' => $ip, 'port' => $port, 'ping' => -1, 'os' => '', 'version' => '', 'versionsort' => ''));
+	$servers = array(array('index' => 0, 'name' => $name, 'numip' => $numip, 'ip' => $ip, 'port' => $port, 'ping' => -1, 'os' => '', 'version' => '', 'versionsort' => ''));
 	$serverbyip[$ip][$port] = 0;
 	$listcomplete = true;
 	send_audio($sock, 25, $ip, $port);
 } elseif (isset($_GET['directory'])) {
 	send_request($sock, CLM_REQ_SERVER_LIST, $ip, $port);
 } else {
-	$servers = array(array('index' => 0, 'name' => $host, 'numip' => $numip, 'ip' => $ip, 'port' => $port, 'ping' => -1, 'os' => '', 'version' => '', 'versionsort' => ''));
+	$servers = array(array('index' => 0, 'name' => $name, 'numip' => $numip, 'ip' => $ip, 'port' => $port, 'ping' => -1, 'os' => '', 'version' => '', 'versionsort' => ''));
 	$serverbyip[$ip][$port] = 0;
 	$listcomplete = true;
 	send_ping_with_num_clients($sock, $ip, $port);

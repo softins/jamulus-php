@@ -10,7 +10,9 @@ return data for all servers registered with that directory server.
 Can also be invoked as `servers.php?server=individual.server.host:port`, which will
 return data just for the specified individual server. Note that in this case,
 the server name, city and country cannot be returned, as they are only available
-from a directory server.
+from a directory server. By default, the hostname is returned in the `name` field
+for a single server, but this can be overridden by providing a name as a query
+parameter: `servers.php?server=individual.server.host:port&name=My+Server+Name`
 
 Finally, it is possible to query a server's welcome message using
 `servers.php?query=individual.server.host:port`, which will briefly initiate
