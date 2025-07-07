@@ -27,5 +27,5 @@ if (isset($_SERVER['HTTP_ORIGIN'])) {
 
 header('Content-Type: application/json');
 
-readfile("http://143.198.104.205/servers.php?" . $_SERVER['QUERY_STRING']);
+readfile("http://137.184.177.58/servers.php?" . $_SERVER['QUERY_STRING']);
 ?>
