@@ -147,13 +147,13 @@ define('CHANNEL_INFOS', 25);			// set channel infos
 define('OPUS_SUPPORTED', 26);			// tells that OPUS codec is supported
 define('LICENCE_REQUIRED', 27);			// licence required
 define('REQ_CHANNEL_LEVEL_LIST', 28);		// request the channel level list
-define('VERSION_AND_OS', 29);	// version number and operating system
-define('CHANNEL_PAN', 30);	// set channel pan for mix
-define('MUTE_STATE_CHANGED', 31);	// mute state of your signal at another client has changed
-define('CLIENT_ID', 32);	// current user ID and server status
-define('RECORDER_STATE', 33);	// contains the state of the jam recorder (ERecorderState)
-define('REQ_SPLIT_MESS_SUPPORT', 34); // request support for split messages
-define('SPLIT_MESS_SUPPORTED', 35); // split messages are supported
+define('VERSION_AND_OS', 29);			// version number and operating system
+define('CHANNEL_PAN', 30);			// set channel pan for mix
+define('MUTE_STATE_CHANGED', 31);		// mute state of your signal at another client has changed
+define('CLIENT_ID', 32);			// current user ID and server status
+define('RECORDER_STATE', 33);			// contains the state of the jam recorder (ERecorderState)
+define('REQ_SPLIT_MESS_SUPPORT', 34);		// request support for split messages
+define('SPLIT_MESS_SUPPORTED', 35);		// split messages are supported
 define('CLM_START', 1000);			// start of connectionless messages
 define('CLM_PING_MS', 1001);			// for measuring ping time
 define('CLM_PING_MS_WITHNUMCLIENTS', 1002);	// for ping time and num. of clients info
@@ -171,8 +171,9 @@ define('CLM_CONN_CLIENTS_LIST', 1013);		// channel infos for connected clients
 define('CLM_REQ_CONN_CLIENTS_LIST', 1014);	// request the connected clients list
 define('CLM_CHANNEL_LEVEL_LIST', 1015);		// channel level list
 define('CLM_REGISTER_SERVER_RESP', 1016);	// status of server registration request
-define('CLM_REGISTER_SERVER_EX', 1017);	// register server with extended information
-define('CLM_RED_SERVER_LIST', 1018); // reduced server list
+define('CLM_REGISTER_SERVER_EX', 1017);		// register server with extended information
+define('CLM_RED_SERVER_LIST', 1018);		// reduced server list
+define('CLM_TCP_SUPPORTED', 1019);		// TCP is supported
 
 $countries = array(
 	0 => '-',
@@ -752,6 +753,9 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			error_log("Unexpected CLIENT_ID from $fromip:$fromport");
 		}
 
+		break;
+
+	case CLM_TCP_SUPPORTED:
 		break;
 
 	case CLM_CHANNEL_LEVEL_LIST:
