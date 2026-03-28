@@ -932,7 +932,8 @@ for ($clientport = CLIENT_PORT; $clientport < CLIENT_PORT + CLIENT_PORTS_TO_TRY;
 	}
 }
 
-socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>1, 'usec'=>500000));
+$timeout_ms = 500;
+socket_set_option($sock, SOL_SOCKET, SO_RCVTIMEO, array('sec'=>0, 'usec'=>$timeout_ms * 1000));
 
 $name = isset($_GET['name']) ? $_GET['name'] : $host;
 
@@ -957,18 +958,39 @@ $fromport = $port;
 // $maxgap = 0;
 // $last = gettimeofday(true);
 
-while (!$done && $n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport)) {
-	// printf("socket_recvfrom: %d bytes received from %s:%d\n", $n, $fromip, $fromport);
+$attempts = 1;
+$max_attempts = 3;
 
-	if ($n != strlen($data)) {
-		error_log("Returned data length does not match string from $fromip:$fromport");
-		continue;
+while (!$done) {
+	$n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport);
+
+	if ($n === false) {
+		if (count($servers) <= 1 && $attempts < $max_attempts) {
+			// Timeout with no data yet — re-send and try again
+			$attempts++;
+			if (isset($_GET['directory'])) {
+				send_request($sock, CLM_REQ_SERVER_LIST, $ip, $port);
+			} else {
+				send_ping_with_num_clients($sock, $ip, $port);
+			}
+			continue;
+		} elseif (count($servers) <= 1) {
+			error_log("servers.php: no response from $ip after $max_attempts attempts");
+			break;
+		} else {
+			break; // normal end-of-stream
+		}
 	}
 
 	// $now = gettimeofday(true);
 
 	// if ($now - $last > $maxgap) $maxgap = $now - $last;
 	// $last = $now;
+
+	if ($n != strlen($data)) {
+		error_log("Returned data length does not match string from $fromip:$fromport");
+		continue;
+	}
 
 	process_received($sock, $data, $n, $fromip, $fromport);
 }
