@@ -711,7 +711,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 				} elseif (strncmp($m[5], 'rc', 2)==0 || strncmp($m[5], 'beta', 4)==0 || strncmp($m[5], 'alpha', 5)==0) {
 					// release candidate, beta or alpha - sort before bare version
 					$k = '<';
-				} elseif ($m[7] == '') {
+				} elseif (!isset($m[7]) || $m[7] == '') {
 					// no timestamp - sort after bare version but before timestamps
 					$k = '>';
 				} else {
@@ -903,7 +903,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 				} elseif (strncmp($m[5], 'rc', 2)==0 || strncmp($m[5], 'beta', 4)==0 || strncmp($m[5], 'alpha', 5)==0) {
 					// release candidate, beta or alpha - sort before bare version
 					$k = '<';
-				} elseif ($m[7] == '') {
+				} elseif (!isset($m[7]) || $m[7] == '') {
 					// no timestamp - sort after bare version but before timestamps
 					$k = '>';
 				} else {
