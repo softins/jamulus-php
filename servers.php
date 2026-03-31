@@ -960,12 +960,13 @@ $fromport = $port;
 
 $attempts = 1;
 $max_attempts = 3;
+$received_data = false;
 
 while (!$done) {
 	$n = socket_recvfrom($sock, $data, 32767, 0, $fromip, $fromport);
 
 	if ($n === false) {
-		if (count($servers) <= 1 && $attempts < $max_attempts) {
+		if (!$received_data && $attempts < $max_attempts) {
 			// Timeout with no data yet — re-send and try again
 			$attempts++;
 			if (isset($_GET['directory'])) {
@@ -974,7 +975,7 @@ while (!$done) {
 				send_ping_with_num_clients($sock, $ip, $port);
 			}
 			continue;
-		} elseif (count($servers) <= 1) {
+		} elseif (!$received_data) {
 			error_log("servers.php: no response from $ip after $max_attempts attempts");
 			break;
 		} else {
@@ -992,6 +993,7 @@ while (!$done) {
 		continue;
 	}
 
+	$received_data = true;
 	process_received($sock, $data, $n, $fromip, $fromport);
 }
 
