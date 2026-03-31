@@ -687,10 +687,10 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$a = unpack("a{$len}welcome", substr($data, $i, $len)); $i += $len;
 			$server['welcome'] = $a['welcome'];
 			unset($server);
+			$done = true;	// received the welcome message
 		} else {
 			error_log("Unexpected CHAT_TEXT from $fromip:$fromport");
 		}
-		$done = true;	// received the welcome message
 
 		break;
 
@@ -721,10 +721,10 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 				$server['versionsort'] = sprintf("%03d%03d%03d%s%s", $m[2], $m[3], $m[4], $k, $m[5]);
 			}
 			unset($server);
+			$done = true;	// always comes after welcome message
 		} else {
 			error_log("Unexpected VERSION_AND_OS from $fromip:$fromport\n");
 		}
-		$done = true;	// always comes after welcome message
 
 		break;
 
@@ -735,10 +735,10 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$resp = unpack("Crecstate", substr($data, 7, 1));
 			$server['recstate'] = $resp['recstate'];
 			unset($server);
+			$done = true;	// always comes after welcome message
 		} else {
 			error_log("Unexpected RECORDER_STATE from $fromip:$fromport");
 		}
-		$done = true;	// always comes after welcome message
 
 		break;
 
