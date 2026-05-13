@@ -103,6 +103,14 @@ for(;;) {
 	if ($tmp = @fopen($tmpfile, 'x'))
 		break;  // we have the temp file, so fetch new data
 
+	// If the temp file is stale (e.g. the writer crashed without cleanup),
+	// remove it and try again immediately
+	if (file_exists($tmpfile) && filemtime($tmpfile) < time() - 30) {
+		error_log("Stale lock file detected for $cachefile, removing");
+		unlink($tmpfile);
+		continue;
+	}
+
 	if (time() > $start + 20) {	// don't wait forever
 		die("Can't obtain temporary file\n");
 	}
