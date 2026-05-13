@@ -162,6 +162,7 @@ define('CLIENT_ID', 32);			// current user ID and server status
 define('RECORDER_STATE', 33);			// contains the state of the jam recorder (ERecorderState)
 define('REQ_SPLIT_MESS_SUPPORT', 34);		// request support for split messages
 define('SPLIT_MESS_SUPPORTED', 35);		// split messages are supported
+define('RAWAUDIO_SUPPORTED', 36);		// raw audio is supported
 define('CLM_START', 1000);			// start of connectionless messages
 define('CLM_PING_MS', 1001);			// for measuring ping time
 define('CLM_PING_MS_WITHNUMCLIENTS', 1002);	// for ping time and num. of clients info
@@ -684,6 +685,19 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 	case REQ_NETW_TRANSPORT_PROPS:
 	case REQ_JITT_BUF_SIZE:
 	case REQ_CHANNEL_INFOS:
+		break;
+
+	case RAWAUDIO_SUPPORTED:
+		if (isset($serverbyip[$fromip][$fromport])) {
+			$index = $serverbyip[$fromip][$fromport];
+			$server =& $servers[$index];
+			$resp = unpack("vlen", substr($data, 7, 2)); $i = 9;
+			$len = $resp['len'];
+			$server['rawaudio'] = true;
+			unset($server);
+		} else {
+			error_log("Unexpected RAWAUDIO_SUPPORTED from $fromip:$fromport");
+		}
 		break;
 
 	case CHAT_TEXT:
