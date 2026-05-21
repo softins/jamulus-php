@@ -637,10 +637,27 @@ function send_ping_with_num_clients($sock, $ip, $port) {
 }
 
 //-----------------------------------------------------------------------------
+// log an unexpected message with directory context and registered identity
+//-----------------------------------------------------------------------------
+function log_unexpected($msgtype, $fromip, $fromport) {
+	global $servers, $serverbyip, $host, $port;
+	$context = "(directory: {$host}:{$port}";
+	if (isset($serverbyip[$fromip])) {
+		$reg_ports = array_keys($serverbyip[$fromip]);
+		$reg_port = $reg_ports[0];
+		$reg_idx = $serverbyip[$fromip][$reg_port];
+		$reg_name = isset($servers[$reg_idx]['name']) ? $servers[$reg_idx]['name'] : '?';
+		$context .= sprintf(', registered as %s:%d name="%s"', $fromip, $reg_port, $reg_name);
+	}
+	$context .= ')';
+	error_log("Unexpected {$msgtype} from {$fromip}:{$fromport} {$context}");
+}
+
+//-----------------------------------------------------------------------------
 // process a received datagram
 //-----------------------------------------------------------------------------
 function process_received($sock, $data, $n, $fromip, $fromport) {
-	global $numip, $ip, $port;
+	global $numip, $ip, $port, $host;
 	global $servers, $serverbyip;
 	global $clientcount;
 	global $countries, $instruments, $skills, $opsys;
@@ -696,7 +713,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$server['rawaudio'] = true;
 			unset($server);
 		} else {
-			error_log("Unexpected RAWAUDIO_SUPPORTED from $fromip:$fromport");
+			log_unexpected('RAWAUDIO_SUPPORTED', $fromip, $fromport);
 		}
 		break;
 
@@ -711,7 +728,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			unset($server);
 			$done = true;	// received the welcome message
 		} else {
-			error_log("Unexpected CHAT_TEXT from $fromip:$fromport");
+			log_unexpected('CHAT_TEXT', $fromip, $fromport);
 		}
 
 		break;
@@ -745,7 +762,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			unset($server);
 			$done = true;	// always comes after welcome message
 		} else {
-			error_log("Unexpected VERSION_AND_OS from $fromip:$fromport\n");
+			log_unexpected('VERSION_AND_OS', $fromip, $fromport);
 		}
 
 		break;
@@ -759,7 +776,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			unset($server);
 			$done = true;	// always comes after welcome message
 		} else {
-			error_log("Unexpected RECORDER_STATE from $fromip:$fromport");
+			log_unexpected('RECORDER_STATE', $fromip, $fromport);
 		}
 
 		break;
@@ -772,7 +789,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$server['client_id'] = $resp['client_id'];
 			unset($server);
 		} else {
-			error_log("Unexpected CLIENT_ID from $fromip:$fromport");
+			log_unexpected('CLIENT_ID', $fromip, $fromport);
 		}
 
 		break;
@@ -838,20 +855,22 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			unset($server);
 		} elseif (isset($serverbyip[$fromip])) {
 			// must be the same host - set the first one that isn't already set
-			foreach ($serverbyip[$fromip] as $port => $index) {
+			foreach ($serverbyip[$fromip] as $srvport => $index) {
 				$server =& $servers[$index];
 				if (!isset($server['port2'])) {
 					$server['port2'] = $fromport;
 					//$server['port'] = $fromport;
 					$serverbyip[$fromip][$fromport] = $index;
-					//unset($serverbyip[$fromip][$port]);
+					//unset($serverbyip[$fromip][$srvport]);
 					send_ping_with_num_clients($sock, $fromip, $fromport);
+					error_log(sprintf('Port2 reassign: %s registered on :%d name="%s", responding on :%d (directory: %s:%d)',
+						$fromip, $srvport, $server['name'], $fromport, $host, $port));
 					break;
 				}
 				unset($server);
 			}
 		} else {
-			error_log("Unexpected CLM_EMPTY_MESSAGE from $fromip:$fromport");
+			log_unexpected('CLM_EMPTY_MESSAGE', $fromip, $fromport);
 		}
 		break;
 	case CLM_PING_MS_WITHNUMCLIENTS:
@@ -874,7 +893,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			}
 			unset($server);
 		} else {
-			error_log("Unexpected CLM_PING_MS_WITHNUMCLIENTS from $fromip:$fromport");
+			log_unexpected('CLM_PING_MS_WITHNUMCLIENTS', $fromip, $fromport);
 		}
 
 		break;
@@ -905,7 +924,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			}
 			unset($server);
 		} else {
-			error_log("Unexpected CLM_CONN_CLIENTS_LIST from $fromip:$fromport");
+			log_unexpected('CLM_CONN_CLIENTS_LIST', $fromip, $fromport);
 		}
 		break;
 	case CLM_VERSION_AND_OS:
@@ -939,7 +958,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			}
 			unset($server);
 		} else {
-			error_log("Unexpected CLM_VERSION_AND_OS from $fromip:$fromport\n");
+			log_unexpected('CLM_VERSION_AND_OS', $fromip, $fromport);
 		}
 		break;
 	}
