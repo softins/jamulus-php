@@ -855,17 +855,16 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			unset($server);
 		} elseif (isset($serverbyip[$fromip])) {
 			// must be the same host - set the first one that isn't already set
-			$dir_port = $port; // save before foreach shadows $port
-			foreach ($serverbyip[$fromip] as $port => $index) {
+			foreach ($serverbyip[$fromip] as $srvport => $index) {
 				$server =& $servers[$index];
 				if (!isset($server['port2'])) {
 					$server['port2'] = $fromport;
 					//$server['port'] = $fromport;
 					$serverbyip[$fromip][$fromport] = $index;
-					//unset($serverbyip[$fromip][$port]);
+					//unset($serverbyip[$fromip][$srvport]);
 					send_ping_with_num_clients($sock, $fromip, $fromport);
 					error_log(sprintf('Port2 reassign: %s registered on :%d name="%s", responding on :%d (directory: %s:%d)',
-						$fromip, $port, $server['name'], $fromport, $host, $dir_port));
+						$fromip, $srvport, $server['name'], $fromport, $host, $port));
 					break;
 				}
 				unset($server);
