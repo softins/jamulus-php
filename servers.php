@@ -709,7 +709,6 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			$index = $serverbyip[$fromip][$fromport];
 			$server =& $servers[$index];
 			$resp = unpack("vlen", substr($data, 7, 2)); $i = 9;
-			$len = $resp['len'];
 			$server['rawaudio'] = true;
 			unset($server);
 		} else {
