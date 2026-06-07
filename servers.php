@@ -989,7 +989,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 for ($clientport = CLIENT_PORT; $clientport < CLIENT_PORT + CLIENT_PORTS_TO_TRY; $clientport++) {
 	$bind = socket_addrinfo_lookup('::', $clientport, $hints);
 
-	if ($sock = socket_addrinfo_bind($bind[0])) {
+	if ($sock = @socket_addrinfo_bind($bind[0])) {
 		break;
 	}
 }
