@@ -32,6 +32,14 @@ if (isset($_SERVER['HTTP_ORIGIN'])) {
 	}
 }
 
+function parse_host($string) {
+	if (preg_match('/^([^\[:\]]+|\[(.*:.*:.*)\])(:(\d+))?$/', $string, $m, PREG_UNMATCHED_AS_NULL)) {
+		return array($m[2] ?? $m[1], (int)($m[4] ?? 22124));
+	} else {
+		return false;
+	}
+}
+
 header('Content-Type: application/json');
 
 $pretty = isset($_GET['pretty']) ? 'p-' : '';
@@ -43,32 +51,45 @@ if (isset($_GET['central'])) {
 }
 
 if (isset($_GET['directory'])) {
-	@list($host, $port) = explode(':', $_GET['directory']);
+	$a = parse_host($_GET['directory']);
 	$cachefile = '/tmp/directory-' . $pretty;
 } elseif (isset($_GET['server'])) {
-	@list($host, $port) = explode(':', $_GET['server']);
+	$a = parse_host($_GET['server']);
 	$cachefile = '/tmp/server-' . $pretty;
 } elseif (isset($_GET['query'])) {
-	@list($host, $port) = explode(':', $_GET['query']);
-  $cachefile = '/tmp/query-' . $pretty;
+	$a = parse_host($_GET['query']);
+	$cachefile = '/tmp/query-' . $pretty;
 } else {
 	echo '{"error":"No directory or server specified"}';	// send error message
 	exit;
 	//$_GET['directory'] = 'private.jamulus.io:22124';
 }
 
-if (isset($port)) {
-	$port = (int)$port;
-} else {
-	$port = 22124;
-}
-$ip = gethostbyname($host);
-$numip = ip2long($ip);
-
-if ($numip === false) {
-	echo '{"error":"Invalid hostname '.$host.'"}';	// send error message
+if (!$a) {
+	echo '{"error":"Invalid directory or server specified"}';	// send error message
 	exit;
 }
+
+list($host, $port) = $a;
+
+$hints = [
+	// 'ai_family' => AF_UNSPEC,
+	'ai_socktype' => SOCK_DGRAM,
+	'ai_protocol' => SOL_UDP,
+	'ai_flags' => AI_PASSIVE | AI_ADDRCONFIG
+];
+
+$res = socket_addrinfo_lookup($host, $port, $hints);
+
+if (!$res) {
+	echo '{"error":"Directory or server not found"}';	// send error message
+	exit;
+}
+
+$a = socket_addrinfo_explain($res[0]);
+
+$ip = $a['ai_addr']['sin_addr'] ?? $a['ai_addr']['sin6_addr'];
+$numip = bin2hex(inet_pton($ip));
 
 $done = false;
 $listcomplete = false; // need to get the whole list before any other messages
@@ -820,6 +841,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 				$server['port'] = $port;
 			} else {
 				$server['ip'] = long2ip($server['numip']);
+				$server['numip'] = '!'.bin2hex(inet_pton($server['ip']));	// make sort before IPv6
 			}
 			$server['ping'] = -1;
 			$server['os'] = '';
@@ -964,10 +986,10 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 }
 //-----------------------------------------------------------------------------
 
-$sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
-
 for ($clientport = CLIENT_PORT; $clientport < CLIENT_PORT + CLIENT_PORTS_TO_TRY; $clientport++) {
-	if (@socket_bind($sock, '0.0.0.0', $clientport)) {
+	$bind = socket_addrinfo_lookup('::', $clientport, $hints);
+
+	if ($sock = socket_addrinfo_bind($bind[0])) {
 		break;
 	}
 }
@@ -1028,6 +1050,11 @@ while (!$done) {
 	// if ($now - $last > $maxgap) $maxgap = $now - $last;
 	// $last = $now;
 
+	// convert mapped IPv4 to real IPv4
+	if (preg_match('/^::ffff:(.*)/i', $fromip, $m)) {
+		$fromip = $m[1];
+	}
+
 	if ($n != strlen($data)) {
 		error_log("Returned data length does not match string from $fromip:$fromport");
 		continue;
@@ -1049,6 +1076,8 @@ if (isset($_GET['query'])) {
 // printf("%d clients total\n", $clientcount);
 
 socket_close($sock);
+
+// var_dump($servers);
 
 // error_log(sprintf("Max gap between responses = %d ms (%s) for %s", $maxgap * 1000, $_GET['directory'], $_SERVER['REMOTE_ADDR']));
 
