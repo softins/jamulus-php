@@ -72,24 +72,37 @@ if (!$a) {
 
 list($host, $port) = $a;
 
-$hints = [
-	// 'ai_family' => AF_UNSPEC,
+// try IPv4 first for remote hosts
+$ai = socket_addrinfo_lookup($host, $port, [
+	'ai_family' => AF_INET,
 	'ai_socktype' => SOCK_DGRAM,
 	'ai_protocol' => SOL_UDP,
-	'ai_flags' => AI_PASSIVE | AI_ADDRCONFIG
-];
+	'ai_flags' => AI_ADDRCONFIG
+]);
 
-$res = socket_addrinfo_lookup($host, $port, $hints);
+if ($ai !== false) {
+	$a = socket_addrinfo_explain($ai[0]);
+	$ip = $a['ai_addr']['sin_addr'];
+	$numip = '4:'.bin2hex(inet_pton($ip));
+} else {
+	// try IPv6 second for remote hosts
+	$ai = socket_addrinfo_lookup($host, $port, [
+		'ai_family' => AF_INET6,
+		'ai_socktype' => SOCK_DGRAM,
+		'ai_protocol' => SOL_UDP,
+		'ai_flags' => AI_ADDRCONFIG
+	]);
 
-if (!$res) {
-	echo '{"error":"Directory or server not found"}';	// send error message
-	exit;
+	if ($ai !== false) {
+		$a = socket_addrinfo_explain($ai[0]);
+		$ip = $a['ai_addr']['sin6_addr'];
+		$numip = '6:'.bin2hex(inet_pton($ip));
+	} else {
+		echo '{"error":"Directory or server not found"}';	// send error message
+		exit;
+	}
 }
 
-$a = socket_addrinfo_explain($res[0]);
-
-$ip = $a['ai_addr']['sin_addr'] ?? $a['ai_addr']['sin6_addr'];
-$numip = bin2hex(inet_pton($ip));
 
 $done = false;
 $listcomplete = false; // need to get the whole list before any other messages
@@ -841,7 +854,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 				$server['port'] = $port;
 			} else {
 				$server['ip'] = long2ip($server['numip']);
-				$server['numip'] = '!'.bin2hex(inet_pton($server['ip']));	// make sort before IPv6
+				$server['numip'] = '4:'.bin2hex(inet_pton($server['ip']));	// make sort before IPv6
 			}
 			$server['ping'] = -1;
 			$server['os'] = '';
@@ -987,7 +1000,28 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 //-----------------------------------------------------------------------------
 
 for ($clientport = CLIENT_PORT; $clientport < CLIENT_PORT + CLIENT_PORTS_TO_TRY; $clientport++) {
-	$bind = socket_addrinfo_lookup('::', $clientport, $hints);
+	// try IPv6 first for our own socket
+	$bind = socket_addrinfo_lookup('::', $clientport, [
+		'ai_family' => AF_INET6,
+		'ai_socktype' => SOCK_DGRAM,
+		'ai_protocol' => SOL_UDP,
+		'ai_flags' => AI_PASSIVE | AI_ADDRCONFIG
+	]);
+
+	if ($bind === false) {
+		// try IPv4 if IPv6 is not available
+		$bind = socket_addrinfo_lookup('0.0.0.0', $clientport, [
+			'ai_family' => AF_INET,
+			'ai_socktype' => SOCK_DGRAM,
+			'ai_protocol' => SOL_UDP,
+			'ai_flags' => AI_PASSIVE | AI_ADDRCONFIG
+		]);
+	}
+
+	if ($bind === false) {
+		echo '{"error":"Cannot bind local socket"}';	// send error message
+		exit;
+	}
 
 	if ($sock = @socket_addrinfo_bind($bind[0])) {
 		break;
