@@ -12,6 +12,8 @@ $origins = array(
 	'http://explorer.softins.co.uk:8080' => 1
 );
 
+@include './origins.php';	// allow optional extra origins for testing
+
 // if running from command line for testing, copy args into $_GET
 if (array_key_exists('argv', $_SERVER) && is_array($_SERVER['argv'])) {
 	array_shift($_SERVER['argv']);	// discard filename
