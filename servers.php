@@ -218,7 +218,12 @@ define('CLM_CHANNEL_LEVEL_LIST', 1015);		// channel level list
 define('CLM_REGISTER_SERVER_RESP', 1016);	// status of server registration request
 define('CLM_REGISTER_SERVER_EX', 1017);		// register server with extended information
 define('CLM_RED_SERVER_LIST', 1018);		// reduced server list
-define('CLM_TCP_SUPPORTED', 1019);		// TCP is supported
+define('CLM_SERVER_FEATURES', 1019);		// server features message
+define('CLM_REQ_SERVER_FEATURES', 1020);	// request server features
+define('CLM_WELCOME_MESSAGE', 1021);		// server welcome message
+define('CLM_REQ_WELCOME_MESSAGE', 1022);	// request server welcome message
+define('CLM_TCP_SUPPORTED', 1023);		// TCP is supported
+define('CLM_CLIENT_ID', 1024);			// Client ID associated with TCP connection
 
 $countries = array(
 	0 => '-',
