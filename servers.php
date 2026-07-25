@@ -225,6 +225,37 @@ define('CLM_REQ_WELCOME_MESSAGE', 1022);	// request server welcome message
 define('CLM_TCP_SUPPORTED', 1023);		// TCP is supported
 define('CLM_CLIENT_ID', 1024);			// Client ID associated with TCP connection
 
+// server features
+define('FS_FAST_UPDATE', 0);
+define('FS_MULTITHREADING', 1);
+define('FS_RECORDER_ENABLED', 2);
+define('FS_IS_RECORDING', 3);
+define('FS_DELAY_PAN', 4);
+define('FS_IPV6_AVAILABLE', 5);
+define('FS_RAW_AUDIO', 6);
+define('FS_DISCONONQUIT', 7);
+define('FS_HAS_WELCOME_MESSAGE', 8);
+define('FS_IS_LOGGING', 9);
+define('FS_HAS_LICENCE', 10);
+define('FS_HAS_GUI', 11);
+define('FS_RPC_ENABLED', 12);
+
+$features = array(
+	0 => 'fast_update',
+	1 => 'multithreading',
+	2 => 'recorder_enabled',
+	3 => 'is_recording',
+	4 => 'delay_pan',
+	5 => 'ipv6_available',
+	6 => 'raw_audio_available',
+	7 => 'discon_on_quit',
+	8 => 'has_welcome_message',
+	9 => 'is_logging',
+	10 => 'has_licence',
+	11 => 'has_gui',
+	12 => 'rpc_enabled',
+);
+
 $countries = array(
 	0 => '-',
 	1 => 'Afghanistan',
@@ -701,6 +732,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 	global $numip, $ip, $port, $host;
 	global $servers, $serverbyip;
 	global $clientcount;
+	global $features;
 	global $countries, $instruments, $skills, $opsys;
 	global $listcomplete, $msgqueue, $done;
 
@@ -841,7 +873,6 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 		break;
 
 	case CLM_SERVER_LIST:
-
 		for ($i = 7; $i < $n-2;) {
 			$server = unpack("Vnumip/vport/vcountryid/Cmaxclients/Cperm/vlen", substr($data, $i, 12)); $i += 12;
 			$server['country'] = array_key_exists($server['countryid'], $countries) ? $countries[$server['countryid']] : 'Unknown';
@@ -928,6 +959,8 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 				$timems = intval(gettimeofday(TRUE) * 1000) % 86400000;
 				$server['ping'] = $timems - $resp['timems'];
 				send_request($sock, CLM_REQ_VERSION_AND_OS, $fromip, $fromport);
+				send_request($sock, CLM_REQ_SERVER_FEATURES, $fromip, $fromport);
+				send_request($sock, CLM_REQ_WELCOME_MESSAGE, $fromip, $fromport);
 				if ($server['nclients'] = $resp['nclients']) {
 					send_request($sock, CLM_REQ_CONN_CLIENTS_LIST, $fromip, $fromport);
 				}
@@ -1000,6 +1033,37 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			unset($server);
 		} else {
 			log_unexpected('CLM_VERSION_AND_OS', $fromip, $fromport);
+		}
+		break;
+
+	case CLM_SERVER_FEATURES:
+		if (isset($serverbyip[$fromip][$fromport])) {
+			$index = $serverbyip[$fromip][$fromport];
+			$server =& $servers[$index];
+			$resp = unpack("Vfeatures", substr($data, 7, 4));
+			$feat = $resp['features'];
+
+			$server['features'] = array();
+			foreach ($features as $bit => $name) {
+				$server['features'][$name] = !!($feat & (1 << $bit));
+			}
+			unset($server);
+		} else {
+			log_unexpected('CLM_VERSION_AND_OS', $fromip, $fromport);
+		}
+		break;
+
+	case CLM_WELCOME_MESSAGE:
+		if (isset($serverbyip[$fromip][$fromport])) {
+			$index = $serverbyip[$fromip][$fromport];
+			$server =& $servers[$index];
+			$resp = unpack("vlen", substr($data, 7, 2)); $i = 9;
+			$len = $resp['len'];
+			$a = unpack("a{$len}welcome", substr($data, $i, $len)); $i += $len;
+			$server['welcome'] = $a['welcome'];
+			unset($server);
+		} else {
+			log_unexpected('CLM_WELCOME_MESSAGE', $fromip, $fromport);
 		}
 		break;
 	}
