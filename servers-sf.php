@@ -30,5 +30,7 @@ if (isset($_SERVER['HTTP_ORIGIN'])) {
 
 header('Content-Type: application/json');
 
+ini_set('default_socket_timeout',10);
+
 readfile("http://137.184.177.58/servers.php?" . $_SERVER['QUERY_STRING']);
 ?>

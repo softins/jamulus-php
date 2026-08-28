@@ -27,5 +27,7 @@ if (isset($_SERVER['HTTP_ORIGIN'])) {
 
 header('Content-Type: application/json');
 
+ini_set('default_socket_timeout',10);
+
 readfile("http://13.42.109.202/jamulus-php-master/servers.php?" . $_SERVER['QUERY_STRING']);
 ?>
