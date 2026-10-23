@@ -1052,7 +1052,7 @@ function process_received($sock, $data, $n, $fromip, $fromport) {
 			}
 			unset($server);
 		} else {
-			log_unexpected('CLM_VERSION_AND_OS', $fromip, $fromport);
+			log_unexpected('CLM_SERVER_FEATURES', $fromip, $fromport);
 		}
 		break;
 
