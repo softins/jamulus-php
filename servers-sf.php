@@ -18,6 +18,8 @@ $origins = array(
 	'http://explorer.softins.co.uk:8080' => 1
 );
 
+@include './origins.php';	// allow optional extra origins for testing
+
 if (isset($_SERVER['HTTP_ORIGIN'])) {
 	$http_origin = $_SERVER['HTTP_ORIGIN'];
 

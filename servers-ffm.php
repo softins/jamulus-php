@@ -1,4 +1,7 @@
 <?php
+//
+// This is a shim to provide a local https interface to a remote backend that doesn't provide https.
+//
 
 $origins = array(
 	'http://jamulus.softins.co.uk' => 1,
@@ -14,6 +17,8 @@ $origins = array(
 	'https://explorer.softins.co.uk' => 1,
 	'http://explorer.softins.co.uk:8080' => 1
 );
+
+@include './origins.php';	// allow optional extra origins for testing
 
 if (isset($_SERVER['HTTP_ORIGIN'])) {
 	$http_origin = $_SERVER['HTTP_ORIGIN'];
