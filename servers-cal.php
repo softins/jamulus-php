@@ -1,0 +1,38 @@
+<?php
+//
+// This is a shim to provide a local https interface to a remote backend that doesn't provide https.
+//
+
+$origins = array(
+	'http://jamulus.softins.co.uk' => 1,
+	'https://jamulus.softins.co.uk' => 1,
+	'http://jamulus.softins.co.uk:8080' => 1,
+	'http://explorer.jamulus.app' => 1,
+	'https://explorer.jamulus.app' => 1,
+	'http://explorer.jamulus.app:8080' => 1,
+	'http://explorer.jamulus.io' => 1,
+	'https://explorer.jamulus.io' => 1,
+	'http://explorer.jamulus.io:8080' => 1,
+	'http://explorer.softins.co.uk' => 1,
+	'https://explorer.softins.co.uk' => 1,
+	'http://explorer.softins.co.uk:8080' => 1
+);
+
+@include './origins.php';	// allow optional extra origins for testing
+
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+	$http_origin = $_SERVER['HTTP_ORIGIN'];
+
+	if (array_key_exists($http_origin, $origins))
+	{
+		header("Access-Control-Allow-Origin: $http_origin");
+		header("Vary: Origin");
+	}
+}
+
+header('Content-Type: application/json');
+
+ini_set('default_socket_timeout',10);
+
+readfile("http://137.184.43.255:5001/servers.php?" . $_SERVER['QUERY_STRING']);
+?>
